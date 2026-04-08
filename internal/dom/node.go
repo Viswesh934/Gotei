@@ -11,5 +11,6 @@ type Node struct {
 	Type     NodeType
 	Tag      string
 	Content  string
+	Attr     map[string]string
 	Children []*Node
 }
