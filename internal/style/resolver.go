@@ -26,7 +26,7 @@ func Resolve(n *dom.Node) Style {
 		s = applyInlineStyles(s, n.Attr)
 		s = applyClasses(s, n.Attr)
 	}
-	
+
 	if n.Attr != nil {
 	if val, ok := n.Attr["align"]; ok {
 		s.Align = val
@@ -93,20 +93,17 @@ func applyInlineStyles(s Style, attr map[string]string) Style {
 				s.FontSize = size
 			}
 		case "margin":
-			if margin, err := parseSize(val); err == nil {
-				s.Margin = margin
-			}
+			s.Margin = parseBoxDimensions(val, s.Margin)
 		case "padding":
-			if padding, err := parseSize(val); err == nil {
-				s.Padding = padding
-			}
+			s.Padding = parseBoxDimensions(val, s.Padding)
 		case "color":
 			s.Color = val
 		case "background-color", "background":
 			s.BgColor = val
 		case "text-align":
 			if isValidAlign(val) {
-				s.Align = val
+				s.TextAlign = val
+				s.Align = val // legacy support
 			}
 		case "font-weight":
 			if val == "bold" || val == "700" || val == "800" || val == "900" {
@@ -161,11 +158,14 @@ func mergeStyles(base, override Style) Style {
 	if override.FontSize != 0 {
 		base.FontSize = override.FontSize
 	}
-	if override.Margin != 0 {
+	if (override.Margin != BoxDimensions{}) {
 		base.Margin = override.Margin
 	}
-	if override.Padding != 0 {
+	if (override.Padding != BoxDimensions{}) {
 		base.Padding = override.Padding
+	}
+	if override.TextAlign != "" {
+		base.TextAlign = override.TextAlign
 	}
 	if override.Align != "" {
 		base.Align = override.Align
@@ -204,6 +204,53 @@ func parseSize(sizeStr string) (float64, error) {
 	}
 
 	return strconv.ParseFloat(sizeStr, 64)
+}
+
+// parseBoxDimensions parses CSS box model shorthand (margin/padding)
+// Supports: "10px", "10px 20px", "10px 20px 30px", "10px 20px 30px 40px"
+// Returns top, right, bottom, left
+func parseBoxDimensions(sizeStr string, current BoxDimensions) BoxDimensions {
+	values := strings.Fields(sizeStr)
+	dims := current
+
+	if len(values) == 0 {
+		return dims
+	}
+
+	sizes := make([]float64, len(values))
+	for i, v := range values {
+		if size, err := parseSize(v); err == nil {
+			sizes[i] = size
+		}
+	}
+
+	if len(sizes) == 1 {
+		// All sides equal
+		dims.Top = sizes[0]
+		dims.Right = sizes[0]
+		dims.Bottom = sizes[0]
+		dims.Left = sizes[0]
+	} else if len(sizes) == 2 {
+		// Top/Bottom, Left/Right
+		dims.Top = sizes[0]
+		dims.Bottom = sizes[0]
+		dims.Left = sizes[1]
+		dims.Right = sizes[1]
+	} else if len(sizes) == 3 {
+		// Top, Left/Right, Bottom
+		dims.Top = sizes[0]
+		dims.Left = sizes[1]
+		dims.Right = sizes[1]
+		dims.Bottom = sizes[2]
+	} else if len(sizes) >= 4 {
+		// Top, Right, Bottom, Left
+		dims.Top = sizes[0]
+		dims.Right = sizes[1]
+		dims.Bottom = sizes[2]
+		dims.Left = sizes[3]
+	}
+
+	return dims
 }
 
 // isValidAlign checks if alignment value is valid
