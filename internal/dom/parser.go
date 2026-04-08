@@ -31,6 +31,11 @@ func convertNode(n *html.Node) *Node {
 		node := &Node{
 			Type: ElementNode,
 			Tag:  n.Data,
+			Attr: map[string]string{},
+		}
+
+		for _, attr := range n.Attr {
+			node.Attr[attr.Key] = attr.Val
 		}
 
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
