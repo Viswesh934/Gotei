@@ -7,6 +7,7 @@ import (
 	"codeberg.org/go-pdf/fpdf"
 	"github.com/Viswesh934/gotei/internal/dom"
 	"github.com/Viswesh934/gotei/internal/layout"
+	"github.com/Viswesh934/gotei/internal/style"
 )
 
 // RenderPDF is the main entry point that converts a layout tree to PDF bytes
@@ -39,6 +40,18 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 	// This applies CSS, HTML attributes, and classes to get the final style
 	resolvedStyle := box.Style
 
+	// 🔥 DRAW BACKGROUND before text (so text appears on top)
+	if resolvedStyle.BgColor != "" && resolvedStyle.BgColor != "white" {
+		br := &BorderRendering{pdf: pdf}
+		br.DrawBackground(box, resolvedStyle.BgColor)
+	}
+
+	// 🔥 DRAW BOX SHADOW (behind border)
+	if !isZeroShadow(resolvedStyle.BoxShadow) {
+		br := &BorderRendering{pdf: pdf}
+		br.DrawBoxShadow(box, resolvedStyle.BoxShadow)
+	}
+
 	// 🔥 TEXT NODE RENDERING
 	if box.Node.Type == dom.TextNode {
 		// Set font based on resolved style (bold, italic, size)
@@ -56,23 +69,29 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 		lines := splitLines(box.Node.Content, box.Width)
 
 		lineHeight := resolvedStyle.FontSize + 2
-		y := box.Y + resolvedStyle.Padding + resolvedStyle.FontSize
+		y := box.Y + resolvedStyle.Padding.Top + resolvedStyle.FontSize
 
 		// Render each line with proper alignment
 		for _, line := range lines {
 			textWidth := pdf.GetStringWidth(line)
 
-			x := box.X + resolvedStyle.Padding
+			x := box.X + resolvedStyle.Padding.Left
 
-			// 🔥 REAL alignment from resolved style
-			switch resolvedStyle.Align {
+			// Get alignment (prefer TextAlign, fall back to legacy Align)
+			align := resolvedStyle.TextAlign
+			if align == "" {
+				align = resolvedStyle.Align
+			}
+
+			// Apply alignment from resolved style
+			switch align {
 			case "center":
 				x = box.X + (box.Width-textWidth)/2
 			case "right":
-				x = box.X + box.Width - textWidth - resolvedStyle.Padding
+				x = box.X + box.Width - textWidth - resolvedStyle.Padding.Right
 			case "justify":
 				// Could implement justify here with custom spacing
-				x = box.X + resolvedStyle.Padding
+				x = box.X + resolvedStyle.Padding.Left
 			}
 
 			// Set text color from resolved style
@@ -88,8 +107,14 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 		pdf.SetTextColor(0, 0, 0)
 	}
 
+	// 🔥 DRAW BORDERS (styled borders, not debug)
+	if resolvedStyle.Border.Width > 0 {
+		br := &BorderRendering{pdf: pdf}
+		br.DrawBorder(box, resolvedStyle)
+	}
+
 	// 🔥 DEBUG: draw box borders (optional - set to false to hide)
-	drawBoxBorders := true
+	drawBoxBorders := false // Set to true to show debug outlines
 	if drawBoxBorders {
 		pdf.SetDrawColor(200, 200, 200) // Light gray borders
 		pdf.Rect(box.X, box.Y, box.Width, box.Height, "")
@@ -206,4 +231,9 @@ func sscanfHex(input string, val *int) (int, error) {
 	}
 	*val = n
 	return 1, nil
+}
+
+// isZeroShadow checks if a shadow has no visual effect
+func isZeroShadow(s style.Shadow) bool {
+	return s.Blur == 0 && s.OffsetX == 0 && s.OffsetY == 0 && s.Spread == 0
 }
