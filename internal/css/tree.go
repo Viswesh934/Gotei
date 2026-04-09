@@ -18,7 +18,6 @@ func applyCascadeRecursive(node *dom.Node, sheet *StyleSheet, parentStyle style.
 	if node == nil {
 		return
 	}
-
 	// Compute style for this node considering cascade and inheritance
 	computed := ComputeStyle(node, sheet, parentStyle)
 	styleMap[node] = computed

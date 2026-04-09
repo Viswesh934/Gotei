@@ -23,6 +23,7 @@ type StyleSheet struct {
 // ComputedStyle calculates the final computed style for a node
 // considering cascade rules, specificity, and inheritance
 func ComputeStyle(node *dom.Node, sheet *StyleSheet, parentStyle style.Style) style.Style {
+
 	// Start with default
 	computed := style.DefaultStyle
 
@@ -44,7 +45,8 @@ func ComputeStyle(node *dom.Node, sheet *StyleSheet, parentStyle style.Style) st
 
 	// Apply inline styles (highest specificity)
 	if node.Type == dom.ElementNode {
-		computed = style.Resolve(node) // This already handles inline styles
+		computed = applyElementAttributes(computed, node)
+		computed = applyInlineStyleAttribute(computed, node)
 	}
 
 	// Apply inheritance for inheritable properties
@@ -249,6 +251,61 @@ func applyProperty(s style.Style, key, val string) style.Style {
 	case "text-shadow":
 		s.TextShadow = parseBoxShadow(val, s.TextShadow)
 	}
+	return s
+}
+
+func applyElementAttributes(s style.Style, node *dom.Node) style.Style {
+	if node.Attr == nil {
+		return s
+	}
+
+	if val, ok := node.Attr["align"]; ok {
+		s.TextAlign = val
+		s.Align = val
+	}
+
+	if val, ok := node.Attr["width"]; ok {
+		if width, err := parseSize(val); err == nil {
+			s.Width = width
+		}
+	}
+
+	if val, ok := node.Attr["height"]; ok {
+		if height, err := parseSize(val); err == nil {
+			s.Height = height
+		}
+	}
+
+	return s
+}
+
+func applyInlineStyleAttribute(s style.Style, node *dom.Node) style.Style {
+	if node.Attr == nil {
+		return s
+	}
+
+	styleStr, ok := node.Attr["style"]
+	if !ok {
+		return s
+	}
+
+	parts := strings.Split(styleStr, ";")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		kv := strings.SplitN(part, ":", 2)
+		if len(kv) != 2 {
+			continue
+		}
+
+		key := strings.ToLower(strings.TrimSpace(kv[0]))
+		val := strings.TrimSpace(kv[1])
+		s = applyProperty(s, key, val)
+	}
+
 	return s
 }
 
