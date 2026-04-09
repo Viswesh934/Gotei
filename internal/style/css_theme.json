@@ -1,0 +1,120 @@
+{
+  "fonts": {
+    "defaultFamily": "Arial",
+    "monospaceFamily": "Courier",
+    "baseSize": 12,
+    "allProperties": {
+      "fontFamily": ["Arial", "Verdana", "Helvetica", "Times New Roman", "Georgia", "Courier New", "monospace", "sans-serif", "serif"],
+      "fontSize": {
+        "px": [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 32, 48],
+        "em": [0.5, 0.75, 1, 1.25, 1.5, 2],
+        "rem": [0.5, 0.75, 1, 1.25, 1.5, 2],
+        "percent": [50, 75, 100, 125, 150, 200],
+        "keywords": ["xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger"]
+      },
+      "fontWeight": {
+        "keywords": ["normal", "bold", "bolder", "lighter"],
+        "numeric": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+      },
+      "fontStyle": ["normal", "italic", "oblique"],
+      "fontVariant": ["normal", "small-caps", "all-small-caps", "petite-caps", "unicase", "titling-caps"],
+      "fontStretch": ["normal", "condensed", "expanded", "extra-condensed", "extra-expanded", "semi-condensed", "semi-expanded", "ultra-condensed", "ultra-expanded"],
+      "lineHeight": {
+        "unitless": [1, 1.2, 1.5, 1.8, 2],
+        "px": [16, 20, 24, 28, 32, 40],
+        "percent": [100, 120, 150, 180, 200],
+        "keywords": ["normal"]
+      },
+      "letterSpacing": {
+        "px": [-2, -1, -0.5, 0, 0.5, 1, 2, 3, 5],
+        "em": [-0.05, -0.03, 0, 0.03, 0.05, 0.1],
+        "normal": "normal"
+      },
+      "wordSpacing": {
+        "px": [-2, -1, 0, 1, 2, 4, 8],
+        "em": [-0.1, -0.05, 0, 0.05, 0.1, 0.2],
+        "normal": "normal"
+      },
+      "textAlign": ["left", "right", "center", "justify", "start", "end"],
+      "textDecoration": {
+        "line": ["none", "underline", "overline", "line-through"],
+        "style": ["solid", "double", "dotted", "dashed", "wavy"],
+        "color": "inherit"
+      },
+      "textTransform": ["none", "capitalize", "uppercase", "lowercase", "full-width"],
+      "textIndent": {
+        "px": [0, 16, 24, 32, 48],
+        "em": [0, 1, 2, 3],
+        "percent": [0, 5, 10, 20]
+      },
+      "fontSynthesis": ["none", "weight", "style", "small-caps"],
+      "fontKerning": ["auto", "normal", "none"],
+      "fontFeatureSettings": ["normal", "\"kern\"", "\"liga\" 1", "\"calt\" 0"],
+      "fontVariationSettings": ["normal", "\"wght\" 700", "\"wdth\" 150"],
+      "systemFonts": ["caption", "icon", "menu", "message-box", "small-caption", "status-bar"]
+    }
+  },
+  "colors": {
+    "defaultText": "black",
+    "defaultBackground": "white",
+    "named": {
+      "black": "#000000",
+      "white": "#FFFFFF",
+      "red": "#FF0000",
+      "green": "#008000",
+      "blue": "#0000FF",
+      "yellow": "#FFFF00",
+      "cyan": "#00FFFF",
+      "magenta": "#FF00FF",
+      "gray": "#808080",
+      "lightgray": "#D3D3D3",
+      "darkgray": "#404040",
+      "orange": "#FFA500",
+      "purple": "#800080",
+      "brown": "#A52A2A",
+      "pink": "#FFC0CB",
+      "lightblue": "#ADD8E6",
+      "lightgreen": "#90EE90",
+      "lightcoral": "#F08080"
+    },
+    "allFormats": {
+      "hex": {
+        "3digit": ["#000", "#F00", "#0F0", "#00F", "#FFF", "#FF0", "#F0F", "#0FF"],
+        "4digit": ["#0000", "#F00F", "#0F0F", "#00FF", "#FFFF", "#FF0F", "#F0FF", "#0FFF"],
+        "6digit": ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFFFF", "#FFFF00", "#FF00FF", "#00FFFF"],
+        "8digit": ["#000000FF", "#FF0000FF", "#00FF00FF", "#0000FFFF", "#FFFFFF00", "#FFFF00FF"]
+      },
+      "rgb": {
+        "rgb": ["rgb(0,0,0)", "rgb(255,0,0)", "rgb(0,255,0)", "rgb(0,0,255)", "rgb(255,255,255)"],
+        "rgba": ["rgba(0,0,0,1)", "rgba(255,0,0,0.5)", "rgba(0,255,0,0.75)", "rgba(0,0,255,0.25)", "rgba(255,255,255,0)"],
+        "percent": ["rgb(0%,0%,0%)", "rgb(100%,0%,0%)", "rgb(0%,100%,0%)", "rgb(0%,0%,100%)"]
+      },
+      "hsl": {
+        "hsl": ["hsl(0,0%,0%)", "hsl(0,100%,50%)", "hsl(120,100%,50%)", "hsl(240,100%,50%)", "hsl(0,0%,100%)"],
+        "hsla": ["hsla(0,0%,0%,1)", "hsla(0,100%,50%,0.5)", "hsla(120,100%,50%,0.75)", "hsla(240,100%,50%,0.25)"]
+      },
+      "hwb": ["hwb(0 0% 0%)", "hwb(0 0% 0% / 0.5)", "hwb(120 0% 0%)", "hwb(240 0% 0%)"],
+      "lab": ["lab(0% 0 0)", "lab(50% 50 0)", "lab(100% 0 0)"],
+      "lch": ["lch(0% 0 0)", "lch(50% 50 120)", "lch(100% 0 0)"],
+      "color": {
+        "srgb": ["color(srgb 0 0 0)", "color(srgb 1 0 0)", "color(srgb 0 1 0)", "color(srgb 0 0 1)"],
+        "display-p3": ["color(display-p3 0 0 0)", "color(display-p3 1 0 0)", "color(display-p3 0 1 0)"],
+        "srgb-linear": ["color(srgb-linear 0 0 0)", "color(srgb-linear 1 1 1)"],
+        "xyz": ["color(xyz 0 0 0)", "color(xyz 1 1 1)"]
+      },
+      "oklab": ["oklab(0% 0 0)", "oklab(50% 0.1 0.1)", "oklab(100% 0 0)"],
+      "oklch": ["oklch(0% 0 0)", "oklch(50% 0.2 140)", "oklch(100% 0 0)"],
+      "transparent": "transparent",
+      "currentColor": "currentColor",
+      "cssVariables": ["var(--color-primary)", "var(--color-secondary)", "var(--color-accent)"],
+      "namedColorsExtended": {
+        "standard": ["aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "blanchedalmond", "blueviolet", "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen", "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue", "darkslategray", "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "greenyellow", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon", "lightcyan", "lightgoldenrodyellow", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightsteelblue", "lightyellow", "lime", "limegreen", "linen", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "plum", "powderblue", "rebeccapurple", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet", "wheat", "whitesmoke", "yellowgreen"]
+      }
+    },
+    "cssFunctions": {
+      "colorMix": ["color-mix(in srgb, red 50%, blue)", "color-mix(in hsl, white 30%, black)"],
+      "lightDark": ["light-dark(white, black)", "light-dark(#fff, #000)"],
+      "relativeColors": ["from currentColor r g b", "from var(--color) r g b / alpha"]
+    }
+  }
+}

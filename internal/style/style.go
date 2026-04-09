@@ -522,6 +522,3 @@ var ClassStyles = map[string]Style{
 		Color: "blue",
 	},
 }
-
-// Package needs imports at the top for these functions to work
-// They're defined in resolver.go but exported here for CSS package use

@@ -28,139 +28,179 @@ func LayoutFlexbox(box *Box, x, y, maxWidth float64) float64 {
 		return 0
 	}
 
-	isRow := box.Style.FlexDirection == "row" || box.Style.FlexDirection == ""
-	isWrap := box.Style.FlexWrap == "wrap"
-
-	if isRow {
-		return layoutFlexRow(box, x, y, maxWidth)
-	}
-	var _ bool = isWrap
-	return layoutFlexColumn(box, x, y, maxWidth)
-}
-
-func layoutFlexRow(box *Box, x, y, maxWidth float64) float64 {
-	paddingH := box.Style.Padding.Left + box.Style.Padding.Right
-	marginH := box.Style.Margin.Left + box.Style.Margin.Right
-	availableWidth := maxWidth - marginH - paddingH
-
+	// Position container
 	box.X = x + box.Style.Margin.Left
 	box.Y = y + box.Style.Margin.Top
-	box.Width = maxWidth - marginH
-
-	// Collect flex items for main axis distribution
-	items := make([]*FlexItem, len(box.Children))
-	totalFlexGrow := 0.0
-	totalFlexShrink := 0.0
-	usedWidth := 0.0
-
-	for i, child := range box.Children {
-		items[i] = &FlexItem{
-			Box:        child,
-			FlexGrow:   child.Style.FlexGrow,
-			FlexShrink: child.Style.FlexShrink,
-			FlexBasis:  child.Style.FlexBasis,
-			MinWidth:   child.Style.MinWidth,
-			MaxWidth:   child.Style.MaxWidth,
-			Margin:     child.Style.Margin,
-		}
-
-		totalFlexGrow += items[i].FlexGrow
-		totalFlexShrink += items[i].FlexShrink
-
-		// Calculate base width
-		if items[i].FlexBasis > 0 {
-			usedWidth += items[i].FlexBasis
-		} else if items[i].Box.Width > 0 {
-			usedWidth += items[i].Box.Width
-		}
+	box.Width = maxWidth - box.Style.Margin.Left - box.Style.Margin.Right
+	if box.Width < 0 {
+		box.Width = 0
 	}
 
-	// Distribute remaining space
-	remainingSpace := availableWidth - usedWidth
+	contentWidth := box.Width - box.Style.Padding.Left - box.Style.Padding.Right
+	if contentWidth < 0 {
+		contentWidth = 0
+	}
+
+	// Recursive pre-measure pass so text/content gets real dimensions before flex math.
+	preMeasureWidth := contentWidth
+	if len(box.Children) > 0 {
+		preMeasureWidth = contentWidth / float64(len(box.Children))
+	}
+	if preMeasureWidth < 0 {
+		preMeasureWidth = 0
+	}
+	for _, child := range box.Children {
+		Layout(child, box.X+box.Style.Padding.Left, box.Y+box.Style.Padding.Top, preMeasureWidth)
+	}
+
+	isRow := box.Style.FlexDirection == "row" || box.Style.FlexDirection == ""
+	if isRow {
+		return layoutFlexRowFixed(box, contentWidth)
+	}
+	return layoutFlexColumnFixed(box, contentWidth)
+}
+
+// layoutFlexRowFixed arranges items horizontally
+func layoutFlexRowFixed(box *Box, contentWidth float64) float64 {
+	availableWidth := contentWidth
+
+	// Collect flex items
+	totalFlexGrow := 0.0
+	totalFlexShrink := 0.0
+	totalUsedWidth := 0.0 // Includes item outer widths (not gap)
+
+	for _, child := range box.Children {
+		totalFlexGrow += child.Style.FlexGrow
+		totalFlexShrink += child.Style.FlexShrink
+
+		baseWidth := child.Width // content-based width from pre-measure pass
+		if child.Style.FlexBasis > 0 {
+			baseWidth = child.Style.FlexBasis
+		}
+		if baseWidth < 0 {
+			baseWidth = 0
+		}
+
+		child.Width = baseWidth
+		totalUsedWidth += child.Width + child.Style.Margin.Left + child.Style.Margin.Right
+	}
+
+	gapTotal := 0.0
+	if len(box.Children) > 1 {
+		gapTotal = box.Style.Gap * float64(len(box.Children)-1)
+	}
+
+	// Calculate remaining space for flex distribution
+	remainingSpace := availableWidth - totalUsedWidth - gapTotal
+
+	// Distribute space based on flex-grow or flex-shrink
 	if remainingSpace > 0 && totalFlexGrow > 0 {
-		// Grow items
-		for _, item := range items {
-			if item.FlexGrow > 0 {
-				extra := (remainingSpace * item.FlexGrow) / totalFlexGrow
-				item.Box.Width += extra
+		// Grow items proportionally.
+		for _, child := range box.Children {
+			if child.Style.FlexGrow > 0 {
+				extra := (remainingSpace * child.Style.FlexGrow) / totalFlexGrow
+				child.Width += extra
 			}
 		}
 	} else if remainingSpace < 0 && totalFlexShrink > 0 {
-		// Shrink items
-		for _, item := range items {
-			if item.FlexShrink > 0 {
-				reduction := (-remainingSpace * item.FlexShrink) / totalFlexShrink
-				item.Box.Width = math.Max(item.MinWidth, item.Box.Width-reduction)
+		// Shrink items proportionally.
+		for _, child := range box.Children {
+			if child.Style.FlexShrink > 0 {
+				reduction := (-remainingSpace * child.Style.FlexShrink) / totalFlexShrink
+				child.Width = math.Max(child.Style.MinWidth, child.Width-reduction)
 			}
 		}
 	}
 
-	// Position items along main axis
+	// Final child layout pass with resolved outer widths.
 	currentX := box.X + box.Style.Padding.Left
-	maxHeight := 0.0
+	maxOuterHeight := 0.0
 
+	for i, child := range box.Children {
+		outerWidth := child.Width + child.Style.Margin.Left + child.Style.Margin.Right
+		if outerWidth < 0 {
+			outerWidth = 0
+		}
+
+		outerHeight := Layout(child, currentX, box.Y+box.Style.Padding.Top, outerWidth)
+		if outerHeight > maxOuterHeight {
+			maxOuterHeight = outerHeight
+		}
+
+		currentX += outerWidth
+		if i < len(box.Children)-1 {
+			currentX += box.Style.Gap
+		}
+	}
+
+	// Apply cross-axis alignment (vertical alignment for flex-row)
 	for _, child := range box.Children {
-		child.X = currentX + child.Style.Margin.Left
-		child.Y = box.Y + box.Style.Padding.Top + child.Style.Margin.Top
-
-		// Align items on cross axis (vertical for row)
+		childOuterHeight := child.Height + child.Style.Margin.Top + child.Style.Margin.Bottom
+		dy := 0.0
 		switch box.Style.AlignItems {
 		case "center":
-			// Will be calculated after we know max height
+			dy = (maxOuterHeight - childOuterHeight) / 2
 		case "flex-end":
-			// Will be calculated after we know max height
-		default: // flex-start, stretch
-			// Default behavior
-		}
-
-		currentX += child.Width + child.Style.Margin.Left + child.Style.Margin.Right + box.Style.Gap
-
-		if child.Height > maxHeight {
-			maxHeight = child.Height
-		}
-	}
-
-	// Apply cross-axis alignment
-	for _, child := range box.Children {
-		switch box.Style.AlignItems {
-		case "center":
-			child.Y = box.Y + box.Style.Padding.Top + (maxHeight-child.Height)/2
-		case "flex-end":
-			child.Y = box.Y + box.Style.Padding.Top + maxHeight - child.Height
-		}
-	}
-
-	box.Height = maxHeight + box.Style.Padding.Top + box.Style.Padding.Bottom
-
-	// Distribute items along main axis if justify-content is set
-	totalItemWidth := 0.0
-	for _, child := range box.Children {
-		totalItemWidth += child.Width + child.Style.Margin.Left + child.Style.Margin.Right
-	}
-	freeSpace := availableWidth - totalItemWidth
-
-	if freeSpace > 0 {
-		switch box.Style.JustifyContent {
-		case "center":
-			offset := freeSpace / 2
-			for _, child := range box.Children {
-				child.X += offset
+			dy = maxOuterHeight - childOuterHeight
+		case "stretch":
+			target := maxOuterHeight - child.Style.Margin.Top - child.Style.Margin.Bottom
+			if target < 0 {
+				target = 0
 			}
-		case "flex-end":
-			for _, child := range box.Children {
-				child.X += freeSpace
-			}
-		case "space-between":
-			if len(box.Children) > 1 {
-				gap := freeSpace / float64(len(box.Children)-1)
-				for i := 1; i < len(box.Children); i++ {
-					box.Children[i].X += gap * float64(i)
+			child.Height = target
+		default: // "flex-start"
+			// No shift.
+		}
+
+		if dy != 0 {
+			shiftSubtree(child, 0, dy)
+		}
+	}
+
+	// Calculate container height
+	box.Height = maxOuterHeight + box.Style.Padding.Top + box.Style.Padding.Bottom
+
+	// Apply extra distribution from justify-content in addition to base gap spacing.
+	if box.Style.JustifyContent != "" && box.Style.JustifyContent != "flex-start" {
+		totalItemWidth := 0.0
+		for _, child := range box.Children {
+			totalItemWidth += child.Width + child.Style.Margin.Left + child.Style.Margin.Right
+		}
+
+		freeSpace := availableWidth - totalItemWidth - gapTotal
+
+		if freeSpace > 0 {
+			switch box.Style.JustifyContent {
+			case "center":
+				offset := freeSpace / 2
+				for _, child := range box.Children {
+					shiftSubtree(child, offset, 0)
 				}
-			}
-		case "space-around":
-			gap := freeSpace / float64(len(box.Children))
-			for i, child := range box.Children {
-				child.X += gap * (float64(i) + 0.5)
+
+			case "flex-end":
+				for _, child := range box.Children {
+					shiftSubtree(child, freeSpace, 0)
+				}
+
+			case "space-between":
+				if len(box.Children) > 1 {
+					spaceBetweenGap := freeSpace / float64(len(box.Children)-1)
+					for i := 1; i < len(box.Children); i++ {
+						shiftSubtree(box.Children[i], spaceBetweenGap*float64(i), 0)
+					}
+				}
+
+			case "space-around":
+				spacePer := freeSpace / float64(len(box.Children))
+				for i, child := range box.Children {
+					shiftSubtree(child, spacePer*(float64(i)+0.5), 0)
+				}
+
+			case "space-evenly":
+				spacePer := freeSpace / float64(len(box.Children)+1)
+				for i, child := range box.Children {
+					shiftSubtree(child, spacePer*float64(i+1), 0)
+				}
 			}
 		}
 	}
@@ -168,46 +208,133 @@ func layoutFlexRow(box *Box, x, y, maxWidth float64) float64 {
 	return box.Height + box.Style.Margin.Top + box.Style.Margin.Bottom
 }
 
-func layoutFlexColumn(box *Box, x, y, maxWidth float64) float64 {
+// layoutFlexColumnFixed arranges items vertically
+func layoutFlexColumnFixed(box *Box, contentWidth float64) float64 {
 	paddingV := box.Style.Padding.Top + box.Style.Padding.Bottom
-	marginV := box.Style.Margin.Top + box.Style.Margin.Bottom
-	availableHeight := 842.0 - y - marginV - paddingV
+	availableHeight := 842.0 - box.Y - box.Style.Margin.Bottom - paddingV // A4 page height
 
-	box.X = x + box.Style.Margin.Left
-	box.Y = y + box.Style.Margin.Top
-	box.Width = maxWidth
-
+	// Collect flex items
 	totalFlexGrow := 0.0
 	totalFlexShrink := 0.0
-	usedHeight := 0.0
+	totalUsedHeight := 0.0
 
 	for _, child := range box.Children {
 		totalFlexGrow += child.Style.FlexGrow
 		totalFlexShrink += child.Style.FlexShrink
-		usedHeight += child.Height + child.Style.Margin.Top + child.Style.Margin.Bottom
+		totalUsedHeight += child.Height + child.Style.Margin.Top + child.Style.Margin.Bottom
 	}
 
+	// Account for gaps
+	numGaps := math.Max(0, float64(len(box.Children)-1))
+	gapTotal := box.Style.Gap * numGaps
+	totalUsedHeight += gapTotal
+
 	// Distribute remaining space
-	remainingSpace := availableHeight - usedHeight
+	remainingSpace := availableHeight - totalUsedHeight
+
 	if remainingSpace > 0 && totalFlexGrow > 0 {
+		// Grow items
 		for _, child := range box.Children {
 			if child.Style.FlexGrow > 0 {
 				extra := (remainingSpace * child.Style.FlexGrow) / totalFlexGrow
 				child.Height += extra
 			}
 		}
+	} else if remainingSpace < 0 && totalFlexShrink > 0 {
+		// Shrink items
+		for _, child := range box.Children {
+			if child.Style.FlexShrink > 0 {
+				reduction := (-remainingSpace * child.Style.FlexShrink) / totalFlexShrink
+				child.Height = math.Max(child.Style.MinHeight, child.Height-reduction)
+			}
+		}
 	}
 
-	// Position items along main axis (vertical)
+	// Position items along main axis (top to bottom)
 	currentY := box.Y + box.Style.Padding.Top
-	for _, child := range box.Children {
-		child.X = box.X + box.Style.Padding.Left + child.Style.Margin.Left
-		child.Y = currentY + child.Style.Margin.Top
+	maxWidth := 0.0
 
-		currentY += child.Height + child.Style.Margin.Top + child.Style.Margin.Bottom + box.Style.Gap
+	for i, child := range box.Children {
+		outerHeight := Layout(child, box.X+box.Style.Padding.Left, currentY, contentWidth)
+
+		// Track widest item for cross-axis alignment
+		if child.Width > maxWidth {
+			maxWidth = child.Width
+		}
+
+		currentY += outerHeight
+		if i < len(box.Children)-1 {
+			currentY += box.Style.Gap
+		}
 	}
 
-	box.Height = usedHeight + paddingV
+	// Apply cross-axis alignment (horizontal alignment for flex-column)
+	for _, child := range box.Children {
+		switch box.Style.AlignItems {
+		case "center":
+			shiftSubtree(child, (maxWidth-child.Width)/2, 0)
+		case "flex-end":
+			shiftSubtree(child, maxWidth-child.Width, 0)
+		case "stretch":
+			child.Width = maxWidth
+		default: // "flex-start"
+			// No shift.
+		}
+	}
 
-	return box.Height + marginV
+	// Calculate container height
+	box.Height = totalUsedHeight + paddingV
+
+	// Apply main-axis alignment (justify-content for column)
+	if box.Style.JustifyContent != "" && box.Style.JustifyContent != "flex-start" {
+		totalItemHeight := 0.0
+		for _, child := range box.Children {
+			totalItemHeight += child.Height + child.Style.Margin.Top + child.Style.Margin.Bottom
+		}
+
+		freeSpace := availableHeight - totalItemHeight - gapTotal
+
+		if freeSpace > 0 {
+			switch box.Style.JustifyContent {
+			case "center":
+				offset := freeSpace / 2
+				for _, child := range box.Children {
+					shiftSubtree(child, 0, offset)
+				}
+
+			case "flex-end":
+				for _, child := range box.Children {
+					shiftSubtree(child, 0, freeSpace)
+				}
+
+			case "space-between":
+				if len(box.Children) > 1 {
+					spaceBetweenGap := freeSpace / float64(len(box.Children)-1)
+					for i := 1; i < len(box.Children); i++ {
+						shiftSubtree(box.Children[i], 0, spaceBetweenGap*float64(i))
+					}
+				}
+
+			case "space-around":
+				spacePer := freeSpace / float64(len(box.Children))
+				for i, child := range box.Children {
+					shiftSubtree(child, 0, spacePer*(float64(i)+0.5))
+				}
+			}
+		}
+	}
+
+	return box.Height + box.Style.Margin.Top + box.Style.Margin.Bottom
+}
+
+func shiftSubtree(box *Box, dx, dy float64) {
+	if box == nil || (dx == 0 && dy == 0) {
+		return
+	}
+
+	box.X += dx
+	box.Y += dy
+	for _, child := range box.Children {
+		shiftSubtree(child, dx, dy)
+	}
 }
