@@ -386,7 +386,7 @@ func main() {
 	}
 
 	// Create output directory
-	outputDir := filepath.Join(repoRoot,"alignment","examples", "output")
+	outputDir := filepath.Join(repoRoot, "examples", "alignment", "examples", "output")
 	err = os.MkdirAll(outputDir, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create output directory: %v", err)
@@ -433,7 +433,7 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Printf("All %d style tests completed! Check examples/output/ for PDFs.\n", len(testCases))
+	fmt.Printf("All %d style tests completed! Check examples/alignment/examples/output/ for PDFs.\n", len(testCases))
 }
 
 func findRepoRoot(start string) (string, error) {
