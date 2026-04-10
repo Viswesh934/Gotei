@@ -23,7 +23,11 @@ func (br *BorderRendering) DrawBorder(box *layout.Box, style style.Style) {
 
 	switch style.Border.Style {
 	case "solid":
-		br.pdf.Rect(box.X, box.Y, box.Width, box.Height, "")
+		if style.Border.Radius > 0 {
+			br.pdf.RoundedRect(box.X, box.Y, box.Width, box.Height, style.Border.Radius, "1234", "")
+		} else {
+			br.pdf.Rect(box.X, box.Y, box.Width, box.Height, "")
+		}
 	case "dashed":
 		br.drawDashedRect(box, 5, 5)
 	case "dotted":
@@ -100,8 +104,5 @@ func (br *BorderRendering) DrawBorderRadius(box *layout.Box, radius float64) {
 		return
 	}
 
-	// PDF doesn't have native rounded rectangles, so we approximate
-	// by drawing corner curves. For simplicity, we show straight rect here
-	// Full implementation would use Bezier curves
-	br.pdf.Rect(box.X+radius, box.Y, box.Width-2*radius, box.Height, "")
+	br.pdf.RoundedRect(box.X, box.Y, box.Width, box.Height, radius, "1234", "")
 }

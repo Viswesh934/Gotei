@@ -69,7 +69,7 @@ type LineHeightConfig struct {
 }
 
 type SpacingConfig struct {
-	Px     []int     `json:"px,omitempty"`
+	Px     []float64 `json:"px,omitempty"`
 	Em     []float64 `json:"em,omitempty"`
 	Normal string    `json:"normal,omitempty"`
 }
@@ -316,20 +316,49 @@ func parseRGBColor(color string) (int, int, int, bool) {
 		return 0, 0, 0, false
 	}
 
-	r, err := strconv.Atoi(strings.TrimSpace(values[0]))
-	if err != nil {
+	r, ok := parseRGBComponent(strings.TrimSpace(values[0]))
+	if !ok {
 		return 0, 0, 0, false
 	}
-	g, err := strconv.Atoi(strings.TrimSpace(values[1]))
-	if err != nil {
+	g, ok := parseRGBComponent(strings.TrimSpace(values[1]))
+	if !ok {
 		return 0, 0, 0, false
 	}
-	b, err := strconv.Atoi(strings.TrimSpace(values[2]))
-	if err != nil {
+	b, ok := parseRGBComponent(strings.TrimSpace(values[2]))
+	if !ok {
 		return 0, 0, 0, false
 	}
 
 	return r, g, b, true
+}
+
+func parseRGBComponent(v string) (int, bool) {
+	v = strings.TrimSpace(v)
+	if strings.HasSuffix(v, "%") {
+		pct, err := strconv.ParseFloat(strings.TrimSuffix(v, "%"), 64)
+		if err != nil {
+			return 0, false
+		}
+		if pct < 0 {
+			pct = 0
+		}
+		if pct > 100 {
+			pct = 100
+		}
+		return int((pct / 100.0) * 255.0), true
+	}
+
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, false
+	}
+	if i < 0 {
+		i = 0
+	}
+	if i > 255 {
+		i = 255
+	}
+	return i, true
 }
 
 // parseHSLColor converts HSL to RGB
@@ -414,7 +443,10 @@ func GetFontSizeValue(sizeType string, value interface{}) (float64, bool) {
 }
 
 func isHexColor(s string) bool {
-	if len(s) != 7 || s[0] != '#' {
+	if s == "" || s[0] != '#' {
+		return false
+	}
+	if len(s) != 4 && len(s) != 5 && len(s) != 7 && len(s) != 9 {
 		return false
 	}
 	for i := 1; i < len(s); i++ {
@@ -430,6 +462,18 @@ func hexToRGB(hex string) (int, int, int, bool) {
 	hex = strings.TrimSpace(hex)
 	if !isHexColor(hex) {
 		return 0, 0, 0, false
+	}
+
+	if len(hex) == 4 || len(hex) == 5 {
+		h := hex[1:]
+		expanded := make([]byte, 0, 7)
+		expanded = append(expanded, '#')
+		expanded = append(expanded, h[0], h[0], h[1], h[1], h[2], h[2])
+		hex = string(expanded)
+	}
+
+	if len(hex) == 9 {
+		hex = hex[:7] // ignore alpha for RGB rendering path
 	}
 
 	r, err := strconv.ParseInt(hex[1:3], 16, 64)

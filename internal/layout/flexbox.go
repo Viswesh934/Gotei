@@ -3,6 +3,7 @@ package layout
 import (
 	"math"
 
+	"github.com/Viswesh934/gotei/internal/dom"
 	"github.com/Viswesh934/gotei/internal/style"
 )
 
@@ -29,9 +30,9 @@ func LayoutFlexbox(box *Box, x, y, maxWidth float64) float64 {
 	}
 
 	// Position container
-	box.X = x + box.Style.Margin.Left
-	box.Y = y + box.Style.Margin.Top
-	box.Width = maxWidth - box.Style.Margin.Left - box.Style.Margin.Right
+	box.X = x
+	box.Y = y
+	box.Width = maxWidth
 	if box.Width < 0 {
 		box.Width = 0
 	}
@@ -73,9 +74,20 @@ func layoutFlexRowFixed(box *Box, contentWidth float64) float64 {
 		totalFlexGrow += child.Style.FlexGrow
 		totalFlexShrink += child.Style.FlexShrink
 
-		baseWidth := child.Width // content-based width from pre-measure pass
+		baseWidth := child.Style.Width
 		if child.Style.FlexBasis > 0 {
 			baseWidth = child.Style.FlexBasis
+		} else if baseWidth <= 0 {
+			if child.Style.FlexGrow > 0 {
+				baseWidth = 0
+			} else {
+				// Use intrinsic content width for non-growing items so justify-content
+				// can center/end-align correctly instead of stretching every item.
+				baseWidth = intrinsicContentWidth(child)
+			}
+		}
+		if baseWidth <= 0 {
+			baseWidth = child.Width
 		}
 		if baseWidth < 0 {
 			baseWidth = 0
@@ -208,6 +220,42 @@ func layoutFlexRowFixed(box *Box, contentWidth float64) float64 {
 	return box.Height + box.Style.Margin.Top + box.Style.Margin.Bottom
 }
 
+func intrinsicContentWidth(box *Box) float64 {
+	if box == nil {
+		return 0
+	}
+
+	if box.Node != nil && box.Node.Type == dom.TextNode {
+		fontSize := box.Style.FontSize
+		if fontSize <= 0 {
+			fontSize = 12
+		}
+		textWidth := float64(len([]rune(box.Node.Content))) * fontSize * 0.55
+		return textWidth + box.Style.Padding.Left + box.Style.Padding.Right
+	}
+
+	if len(box.Children) == 0 {
+		if box.Style.Width > 0 {
+			return box.Style.Width
+		}
+		return box.Style.Padding.Left + box.Style.Padding.Right
+	}
+
+	maxChild := 0.0
+	for _, child := range box.Children {
+		w := intrinsicContentWidth(child) + child.Style.Margin.Left + child.Style.Margin.Right
+		if w > maxChild {
+			maxChild = w
+		}
+	}
+
+	result := maxChild + box.Style.Padding.Left + box.Style.Padding.Right
+	if box.Style.Width > result {
+		result = box.Style.Width
+	}
+	return result
+}
+
 // layoutFlexColumnFixed arranges items vertically
 func layoutFlexColumnFixed(box *Box, contentWidth float64) float64 {
 	paddingV := box.Style.Padding.Top + box.Style.Padding.Bottom
@@ -252,38 +300,67 @@ func layoutFlexColumnFixed(box *Box, contentWidth float64) float64 {
 
 	// Position items along main axis (top to bottom)
 	currentY := box.Y + box.Style.Padding.Top
-	maxWidth := 0.0
+	usedHeight := 0.0
+	alignItems := box.Style.AlignItems
+	if alignItems == "" {
+		alignItems = "stretch"
+	}
 
 	for i, child := range box.Children {
-		outerHeight := Layout(child, box.X+box.Style.Padding.Left, currentY, contentWidth)
-
-		// Track widest item for cross-axis alignment
-		if child.Width > maxWidth {
-			maxWidth = child.Width
+		desiredContentWidth := child.Style.Width
+		if child.Style.FlexBasis > 0 {
+			desiredContentWidth = child.Style.FlexBasis
 		}
 
+		if desiredContentWidth <= 0 {
+			if alignItems == "stretch" {
+				desiredContentWidth = contentWidth - child.Style.Margin.Left - child.Style.Margin.Right
+			} else {
+				desiredContentWidth = intrinsicContentWidth(child)
+			}
+		}
+
+		if desiredContentWidth < 0 {
+			desiredContentWidth = 0
+		}
+
+		outerWidth := desiredContentWidth + child.Style.Margin.Left + child.Style.Margin.Right
+		outerHeight := Layout(child, box.X+box.Style.Padding.Left, currentY, outerWidth)
+
 		currentY += outerHeight
+		usedHeight += outerHeight
 		if i < len(box.Children)-1 {
 			currentY += box.Style.Gap
+			usedHeight += box.Style.Gap
 		}
 	}
 
 	// Apply cross-axis alignment (horizontal alignment for flex-column)
 	for _, child := range box.Children {
+		childOuterWidth := child.Width + child.Style.Margin.Left + child.Style.Margin.Right
+		freeCross := contentWidth - childOuterWidth
+		if freeCross < 0 {
+			freeCross = 0
+		}
+
 		switch box.Style.AlignItems {
 		case "center":
-			shiftSubtree(child, (maxWidth-child.Width)/2, 0)
+			shiftSubtree(child, freeCross/2, 0)
 		case "flex-end":
-			shiftSubtree(child, maxWidth-child.Width, 0)
+			shiftSubtree(child, freeCross, 0)
 		case "stretch":
-			child.Width = maxWidth
+			target := contentWidth - child.Style.Margin.Left - child.Style.Margin.Right
+			if target < 0 {
+				target = 0
+			}
+			child.Width = target
 		default: // "flex-start"
 			// No shift.
 		}
 	}
 
 	// Calculate container height
-	box.Height = totalUsedHeight + paddingV
+	box.Height = usedHeight + paddingV
 
 	// Apply main-axis alignment (justify-content for column)
 	if box.Style.JustifyContent != "" && box.Style.JustifyContent != "flex-start" {
