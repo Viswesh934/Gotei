@@ -1,18 +1,58 @@
 package css
 
 import (
+	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
+	"golang.org/x/net/html"
+	wrselector "github.com/benoitkugler/webrender/css/selector"
+	"github.com/Viswesh934/gotei/internal/debug"
 	"github.com/Viswesh934/gotei/internal/dom"
 	"github.com/Viswesh934/gotei/internal/style"
 )
 
+// Specificity calculates CSS specificity (a,b,c)
+// a = IDs, b = classes+attributes+pseudo-classes, c = elements.
+type Specificity struct {
+	IDs      int
+	Classes  int
+	Elements int
+}
+
+// Compare returns:
+// -1 if s < other
+//  0 if s == other
+//  1 if s > other
+func (s Specificity) Compare(other Specificity) int {
+	if s.IDs != other.IDs {
+		if s.IDs > other.IDs {
+			return 1
+		}
+		return -1
+	}
+	if s.Classes != other.Classes {
+		if s.Classes > other.Classes {
+			return 1
+		}
+		return -1
+	}
+	if s.Elements != other.Elements {
+		if s.Elements > other.Elements {
+			return 1
+		}
+		return -1
+	}
+	return 0
+}
+
 // Rule represents a CSS rule with selector and properties
 type Rule struct {
-	Selector    *Selector
+	Matcher     wrselector.Matcher
 	Properties  map[string]string
 	Specificity Specificity
+	SourceOrder int
 }
 
 // StyleSheet contains CSS rules
@@ -20,9 +60,9 @@ type StyleSheet struct {
 	Rules []*Rule
 }
 
-// ComputedStyle calculates the final computed style for a node
-// considering cascade rules, specificity, and inheritance
-func ComputeStyle(node *dom.Node, sheet *StyleSheet, parentStyle style.Style) style.Style {
+// ComputeStyleWithHTMLNode calculates computed style using a matching HTML node,
+// which enables full selector matching from WebRender's selector engine.
+func ComputeStyleWithHTMLNode(node *dom.Node, htmlNode *html.Node, sheet *StyleSheet, parentStyle style.Style) style.Style {
 
 	// Start with default
 	computed := style.DefaultStyle
@@ -35,8 +75,9 @@ func ComputeStyle(node *dom.Node, sheet *StyleSheet, parentStyle style.Style) st
 	}
 
 	// Collect matching rules sorted by specificity
-	matchingRules := collectMatchingRules(node, sheet)
+	matchingRules := collectMatchingRules(htmlNode, sheet)
 	sortRulesBySpecificity(matchingRules)
+	debug.Logf("css.cascade: node=%s matched-rules=%d", describeNode(node), len(matchingRules))
 
 	// Apply rules in cascading order (lowest to highest specificity)
 	for _, rule := range matchingRules {
@@ -52,17 +93,63 @@ func ComputeStyle(node *dom.Node, sheet *StyleSheet, parentStyle style.Style) st
 	// Apply inheritance for inheritable properties
 	computed = applyInheritance(computed, parentStyle)
 
+	// Text nodes should not carry box-model defaults from the generic style.
+	if node.Type == dom.TextNode {
+		computed.Margin = style.BoxDimensions{}
+		computed.Padding = style.BoxDimensions{}
+		computed.Border = style.Border{}
+	}
+
+	debug.Logf("css.cascade: node=%s computed={display=%s font=%s %.1f color=%s bg=%s align=%s}",
+		describeNode(node),
+		computed.Display,
+		computed.FontFamily,
+		computed.FontSize,
+		computed.Color,
+		computed.BgColor,
+		computed.TextAlign,
+	)
+
 	return computed
 }
 
-func collectMatchingRules(node *dom.Node, sheet *StyleSheet) []*Rule {
+func describeNode(node *dom.Node) string {
+	if node == nil {
+		return "<nil>"
+	}
+	if node.Type == dom.TextNode {
+		trimmed := strings.TrimSpace(node.Content)
+		if len(trimmed) > 30 {
+			trimmed = trimmed[:30] + "..."
+		}
+		if trimmed == "" {
+			trimmed = "(whitespace)"
+		}
+		return fmt.Sprintf("text[%q]", trimmed)
+	}
+	if node.Tag == "" {
+		return "element[unknown]"
+	}
+	if id, ok := node.Attr["id"]; ok && id != "" {
+		return fmt.Sprintf("%s#%s", node.Tag, id)
+	}
+	if class, ok := node.Attr["class"]; ok && class != "" {
+		return fmt.Sprintf("%s.%s", node.Tag, strings.ReplaceAll(class, " ", "."))
+	}
+	return node.Tag
+}
+
+func collectMatchingRules(htmlNode *html.Node, sheet *StyleSheet) []*Rule {
 	if sheet == nil {
+		return []*Rule{}
+	}
+	if htmlNode == nil {
 		return []*Rule{}
 	}
 
 	matching := []*Rule{}
 	for _, rule := range sheet.Rules {
-		if rule.Selector.Matches(node) {
+		if rule.Matcher != nil && rule.Matcher.Match(htmlNode) {
 			matching = append(matching, rule)
 		}
 	}
@@ -70,14 +157,14 @@ func collectMatchingRules(node *dom.Node, sheet *StyleSheet) []*Rule {
 }
 
 func sortRulesBySpecificity(rules []*Rule) {
-	// Simple bubble sort by specificity
-	for i := 0; i < len(rules)-1; i++ {
-		for j := 0; j < len(rules)-i-1; j++ {
-			if rules[j].Specificity.Compare(rules[j+1].Specificity) > 0 {
-				rules[j], rules[j+1] = rules[j+1], rules[j]
-			}
+	sort.SliceStable(rules, func(i, j int) bool {
+		cmp := rules[i].Specificity.Compare(rules[j].Specificity)
+		if cmp != 0 {
+			return cmp < 0
 		}
-	}
+
+		return rules[i].SourceOrder < rules[j].SourceOrder
+	})
 }
 
 func applyRuleProperties(s style.Style, props map[string]string) style.Style {
@@ -94,7 +181,7 @@ func applyProperty(s style.Style, key, val string) style.Style {
 			s.FontSize = size
 		}
 	case "font-family":
-		s.FontFamily = val
+		s.FontFamily = normalizeFontFamily(val)
 	case "font-weight":
 		s.FontWeight = val
 		if val == "bold" || val == "700" || val == "800" || val == "900" {
@@ -309,6 +396,21 @@ func applyInlineStyleAttribute(s style.Style, node *dom.Node) style.Style {
 	return s
 }
 
+func normalizeFontFamily(fontFamily string) string {
+	fontFamily = strings.TrimSpace(fontFamily)
+	if fontFamily == "" {
+		return fontFamily
+	}
+
+	if strings.Contains(fontFamily, ",") {
+		fontFamily = strings.Split(fontFamily, ",")[0]
+	}
+
+	fontFamily = strings.TrimSpace(fontFamily)
+	fontFamily = strings.Trim(fontFamily, `"'`)
+	return fontFamily
+}
+
 // parseSize converts CSS size strings to float64
 func parseSize(sizeStr string) (float64, error) {
 	sizeStr = strings.TrimSpace(sizeStr)
@@ -368,32 +470,47 @@ func parseBoxDimensions(sizeStr string, current style.BoxDimensions) style.BoxDi
 }
 
 func applyInheritance(s style.Style, parent style.Style) style.Style {
-	// Apply inherited properties from parent if node has defaults
-	for propName := range style.InheritableFields {
-		if !style.InheritableFields[propName] {
-			continue // Skip non-inheritable
-		}
-
-		// Simple inheritance: if property is at default and parent has custom value, inherit
-		// This would need reflection for full implementation; for now we handle key properties
-		switch propName {
-		case "FontSize":
-			if s.FontSize == style.DefaultStyle.FontSize && parent.FontSize != style.DefaultStyle.FontSize {
-				s.FontSize = parent.FontSize
-			}
-		case "Color":
-			if s.Color == "black" && parent.Color != "black" {
-				s.Color = parent.Color
-			}
-		case "FontFamily":
-			if s.FontFamily == "" && parent.FontFamily != "" {
-				s.FontFamily = parent.FontFamily
-			}
-		case "LineHeight":
-			if s.LineHeight == 0 && parent.LineHeight != 0 {
-				s.LineHeight = parent.LineHeight
-			}
-		}
+	if s.FontSize == style.DefaultStyle.FontSize && parent.FontSize != style.DefaultStyle.FontSize {
+		s.FontSize = parent.FontSize
+	}
+	if (s.FontFamily == "" || s.FontFamily == style.DefaultStyle.FontFamily) && parent.FontFamily != "" && parent.FontFamily != style.DefaultStyle.FontFamily {
+		s.FontFamily = parent.FontFamily
+	}
+	if (s.FontWeight == "" || s.FontWeight == style.DefaultStyle.FontWeight) && parent.FontWeight != "" && parent.FontWeight != style.DefaultStyle.FontWeight {
+		s.FontWeight = parent.FontWeight
+	}
+	if (s.FontStyle == "" || s.FontStyle == style.DefaultStyle.FontStyle) && parent.FontStyle != "" && parent.FontStyle != style.DefaultStyle.FontStyle {
+		s.FontStyle = parent.FontStyle
+	}
+	if s.LineHeight == style.DefaultStyle.LineHeight && parent.LineHeight != style.DefaultStyle.LineHeight {
+		s.LineHeight = parent.LineHeight
+	}
+	if s.LetterSpacing == style.DefaultStyle.LetterSpacing && parent.LetterSpacing != style.DefaultStyle.LetterSpacing {
+		s.LetterSpacing = parent.LetterSpacing
+	}
+	if s.WordSpacing == style.DefaultStyle.WordSpacing && parent.WordSpacing != style.DefaultStyle.WordSpacing {
+		s.WordSpacing = parent.WordSpacing
+	}
+	if (s.TextTransform == "" || s.TextTransform == style.DefaultStyle.TextTransform) && parent.TextTransform != "" && parent.TextTransform != style.DefaultStyle.TextTransform {
+		s.TextTransform = parent.TextTransform
+	}
+	if (s.TextDecoration == "" || s.TextDecoration == style.DefaultStyle.TextDecoration) && parent.TextDecoration != "" && parent.TextDecoration != style.DefaultStyle.TextDecoration {
+		s.TextDecoration = parent.TextDecoration
+	}
+	if (s.TextAlign == "" || s.TextAlign == style.DefaultStyle.TextAlign) && parent.TextAlign != "" && parent.TextAlign != style.DefaultStyle.TextAlign {
+		s.TextAlign = parent.TextAlign
+	}
+	if (s.Align == "" || s.Align == style.DefaultStyle.Align) && parent.Align != "" && parent.Align != style.DefaultStyle.Align {
+		s.Align = parent.Align
+	}
+	if s.Color == "black" && parent.Color != "black" {
+		s.Color = parent.Color
+	}
+	if !s.Bold && parent.Bold {
+		s.Bold = true
+	}
+	if !s.Italic && parent.Italic {
+		s.Italic = true
 	}
 	return s
 }

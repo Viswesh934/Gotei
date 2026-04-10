@@ -1,4 +1,8 @@
 codeberg.org/go-pdf/fpdf v0.11.0 h1:n3I8WISQ1cr0S2rvx9DOlE/GypbcimMWqLpel3slHmY=
 codeberg.org/go-pdf/fpdf v0.11.0/go.mod h1:Y0DGRAdZ0OmnZPvjbMp/1bYxmIPxm0ws4tfoPOc4LjU=
+github.com/benoitkugler/webrender v0.0.14 h1:3W68U5M/659kNTBU03ZcoQRH10o4J74ecwFcmGJMp4c=
+github.com/benoitkugler/webrender v0.0.14/go.mod h1:EVPWCkFIwYUBQ1KF6Wi2ov6Zl/m7Z59IUwQSICgHAJ8=
 golang.org/x/net v0.52.0 h1:He/TN1l0e4mmR3QqHMT2Xab3Aj3L9qjbhRm78/6jrW0=
 golang.org/x/net v0.52.0/go.mod h1:R1MAz7uMZxVMualyPXb+VaqGSa3LIaUqk0eEt3w36Sw=
+golang.org/x/text v0.35.0 h1:JOVx6vVDFokkpaq1AEptVzLTpDe9KGpj5tR4/X+ybL8=
+golang.org/x/text v0.35.0/go.mod h1:khi/HExzZJ2pGnjenulevKNX1W67CUy0AsXcNubPGCA=

@@ -5,10 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Viswesh934/gotei/internal/dom"
-	"github.com/Viswesh934/gotei/internal/layout"
-	"github.com/Viswesh934/gotei/internal/render"
-	"github.com/Viswesh934/gotei/internal/style"
+	"github.com/Viswesh934/gotei/internal/engine"
 )
 
 func generatePhase4Examples() error {
@@ -195,21 +192,8 @@ body { font-size: 14px; margin: 20px; }
 	for _, test := range tests {
 		fmt.Printf("Generating phase 4 test: %s\n", test.name)
 
-		// Parse HTML
-		root, err := dom.ParseHTML(test.html)
-		if err != nil {
-			fmt.Printf("  Error parsing HTML: %v\n", err)
-			continue
-		}
-
-		// Build layout tree
-		layoutRoot := layout.BuildLayoutTree(root, style.Style{})
-
-		// Calculate layout
-		layout.Layout(layoutRoot, 0, 0, layout.DefaultWidth)
-
-		// Render PDF
-		pdfBytes, err := render.RenderPDF(layoutRoot)
+		// Use the shared engine path so CSS in <style> tags is resolved consistently.
+		pdfBytes, err := engine.Render(test.html)
 		if err != nil {
 			fmt.Printf("  Error rendering PDF: %v\n", err)
 			continue

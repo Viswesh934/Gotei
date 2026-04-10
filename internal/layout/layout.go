@@ -1,12 +1,17 @@
 package layout
 
 import "github.com/Viswesh934/gotei/internal/dom"
+import "github.com/Viswesh934/gotei/internal/debug"
 
 const DefaultWidth = 595.0  // A4 width
 const DefaultHeight = 842.0 // A4 height
 const LineHeight = 16.0     // Default line height in pixels
 
 func Layout(box *Box, x, y, maxWidth float64) float64 {
+	if box == nil {
+		return 0
+	}
+
 	// Apply margin
 	x += box.Style.Margin.Left
 	y += box.Style.Margin.Top
@@ -23,6 +28,7 @@ func Layout(box *Box, x, y, maxWidth float64) float64 {
 
 		lineHeight := CalculateLineHeight(box.Style)
 		box.Height = float64(len(lines))*lineHeight + paddingVertical
+		debug.Logf("layout: text-box x=%.2f y=%.2f w=%.2f h=%.2f lines=%d", box.X, box.Y, box.Width, box.Height, len(lines))
 
 		return box.Height + box.Style.Margin.Top + box.Style.Margin.Bottom
 	}
@@ -30,12 +36,16 @@ func Layout(box *Box, x, y, maxWidth float64) float64 {
 	// Route to appropriate layout algorithm based on display property
 	switch box.Style.Display {
 	case "flex":
-		return LayoutFlexbox(box, x, y, box.Width)
+		h := LayoutFlexbox(box, x, y, box.Width)
+		debug.Logf("layout: flex-box display=%s x=%.2f y=%.2f w=%.2f h=%.2f", box.Style.Display, box.X, box.Y, box.Width, box.Height)
+		return h
 	case "inline", "inline-block":
 		// For now, treat inline-block similar to block
 		fallthrough
 	default: // "block" or empty
-		return layoutBlock(box, x, y)
+		h := layoutBlock(box, x, y)
+		debug.Logf("layout: block-box display=%s x=%.2f y=%.2f w=%.2f h=%.2f", box.Style.Display, box.X, box.Y, box.Width, box.Height)
+		return h
 	}
 }
 

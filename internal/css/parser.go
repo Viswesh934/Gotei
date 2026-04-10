@@ -3,6 +3,9 @@ package css
 import (
 	"strings"
 
+	wrparser "github.com/benoitkugler/webrender/css/parser"
+	wrselector "github.com/benoitkugler/webrender/css/selector"
+	"github.com/Viswesh934/gotei/internal/debug"
 	"github.com/Viswesh934/gotei/internal/dom"
 )
 
@@ -11,10 +14,13 @@ func ParseStyleSheet(htmlRoot *dom.Node) *StyleSheet {
 	sheet := &StyleSheet{
 		Rules: []*Rule{},
 	}
+	sourceOrder := 0
+	styleTagCount := 0
 
 	// Find all <style> tags in the DOM
 	walkDOM(htmlRoot, func(n *dom.Node) {
 		if n.Type == dom.ElementNode && n.Tag == "style" && len(n.Children) > 0 {
+			styleTagCount++
 			// Extract CSS text from style tag
 			cssText := ""
 			for _, child := range n.Children {
@@ -23,11 +29,15 @@ func ParseStyleSheet(htmlRoot *dom.Node) *StyleSheet {
 				}
 			}
 
-			// Parse CSS and add rules to sheet
-			rules := parseCSS(cssText)
+			// Parse CSS using WebRender's parser + selector engine.
+			rules, nextOrder := parseCSS(cssText, sourceOrder)
+			sourceOrder = nextOrder
 			sheet.Rules = append(sheet.Rules, rules...)
+			debug.Logf("css.parse: style-tag=%d css-bytes=%d parsed-rules=%d", styleTagCount, len(cssText), len(rules))
 		}
 	})
+
+	debug.Logf("css.parse: done style-tags=%d total-rules=%d", styleTagCount, len(sheet.Rules))
 
 	return sheet
 }
@@ -43,68 +53,81 @@ func walkDOM(n *dom.Node, fn func(*dom.Node)) {
 	}
 }
 
-// parseCSS parses CSS text and returns a slice of Rules
-// Handles simple selectors and declarations
-func parseCSS(cssText string) []*Rule {
+// parseCSS parses CSS text into rule+declaration entries using WebRender's CSS parser.
+func parseCSS(cssText string, sourceOrder int) ([]*Rule, int) {
 	var rules []*Rule
 
-	// Split by closing brace to find rule blocks
-	blocks := strings.Split(cssText, "}")
-	for _, block := range blocks {
-		block = strings.TrimSpace(block)
-		if block == "" {
+	compounds := wrparser.ParseStylesheetBytes([]byte(cssText), true, true)
+	for _, compound := range compounds {
+		qualified, ok := compound.(wrparser.QualifiedRule)
+		if !ok {
 			continue
 		}
 
-		// Split selector from declarations
-		parts := strings.SplitN(block, "{", 2)
-		if len(parts) != 2 {
+		selectorText := strings.TrimSpace(wrparser.Serialize(qualified.Prelude))
+		if selectorText == "" {
 			continue
 		}
 
-		selector := strings.TrimSpace(parts[0])
-		declarations := strings.TrimSpace(parts[1])
-
-		// Parse selector
-		sel := ParseSelector(selector)
-		if sel == nil {
+		selectorGroup, err := wrselector.ParseGroup(selectorText)
+		if err != nil {
+			debug.Logf("css.parse: selector-parse-failed selector=%q err=%v", selectorText, err)
 			continue
 		}
 
-		// Parse declarations into properties map
-		properties := parseDeclarations(declarations)
-
-		rule := &Rule{
-			Selector:    sel,
-			Properties:  properties,
-			Specificity: sel.Specificity,
+		properties := parseDeclarations(qualified.Content)
+		if len(properties) == 0 {
+			continue
 		}
 
-		rules = append(rules, rule)
+		for _, sel := range selectorGroup {
+			// Pseudo-elements are not represented in our DOM layout tree.
+			if sel.PseudoElement() != "" {
+				continue
+			}
+
+			sp := sel.Specificity()
+			rule := &Rule{
+				Matcher: sel,
+				Properties: properties,
+				Specificity: Specificity{
+					IDs:      sp[0],
+					Classes:  sp[1],
+					Elements: sp[2],
+				},
+				SourceOrder: sourceOrder,
+			}
+			sourceOrder++
+			rules = append(rules, rule)
+		}
+		debug.Logf("css.parse: selector=%q matcher-count=%d properties=%d", selectorText, len(selectorGroup), len(properties))
 	}
 
-	return rules
+	return rules, sourceOrder
 }
 
-// parseDeclarations parses CSS declarations (property: value; property: value;)
-func parseDeclarations(decl string) map[string]string {
+// parseDeclarations parses qualified rule content into property/value pairs.
+func parseDeclarations(tokens []wrparser.Token) map[string]string {
 	properties := make(map[string]string)
 
-	// Split by semicolon
-	parts := strings.Split(decl, ";")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
+	declarations := wrparser.ParseDeclarationList(tokens, true, true)
+	for _, compound := range declarations {
+		decl, ok := compound.(wrparser.Declaration)
+		if !ok {
 			continue
 		}
 
-		// Split by colon
-		kv := strings.SplitN(part, ":", 2)
-		if len(kv) == 2 {
-			key := strings.TrimSpace(kv[0])
-			val := strings.TrimSpace(kv[1])
-			properties[key] = val
+		key := strings.ToLower(strings.TrimSpace(decl.Name))
+		if key == "" {
+			continue
 		}
+
+		val := strings.TrimSpace(wrparser.Serialize(decl.Value))
+		if val == "" {
+			continue
+		}
+
+		properties[key] = val
 	}
 
 	return properties

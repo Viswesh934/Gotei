@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"codeberg.org/go-pdf/fpdf"
+	"github.com/Viswesh934/gotei/internal/debug"
 	"github.com/Viswesh934/gotei/internal/dom"
 	"github.com/Viswesh934/gotei/internal/layout"
 	"github.com/Viswesh934/gotei/internal/style"
@@ -15,6 +16,7 @@ import (
 func RenderPDF(root *layout.Box) ([]byte, error) {
 	pdf := fpdf.New("P", "pt", "A4", "")
 	pdf.AddPage()
+	debug.Logf("render: start root=(x=%.2f y=%.2f w=%.2f h=%.2f)", root.X, root.Y, root.Width, root.Height)
 
 	// Render the layout tree recursively
 	renderBox(pdf, root)
@@ -23,8 +25,10 @@ func RenderPDF(root *layout.Box) ([]byte, error) {
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
 	if err != nil {
+		debug.Logf("render: pdf-output failed: %v", err)
 		return nil, err
 	}
+	debug.Logf("render: pdf-output bytes=%d", buf.Len())
 
 	return buf.Bytes(), nil
 }
@@ -86,11 +90,14 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 			}
 		}
 
-		// Split text into lines
-		lines := splitLines(box.Node.Content, box.Width)
+		contentLeft := box.X + resolvedStyle.Padding.Left
+		contentWidth := box.Width - resolvedStyle.Padding.Left - resolvedStyle.Padding.Right
+		if contentWidth < 0 {
+			contentWidth = 0
+		}
 
-		// Calculate text indent (use left padding as fallback)
-		textIndent := resolvedStyle.Padding.Left
+		// Split text into lines using the inner content width.
+		lines := splitLines(box.Node.Content, contentWidth)
 
 		y := box.Y + resolvedStyle.Padding.Top + resolvedStyle.FontSize
 
@@ -98,7 +105,7 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 		for lineIdx, line := range lines {
 			// Apply text shadow if present
 			if !isZeroShadow(resolvedStyle.TextShadow) {
-				shadowX := box.X + textIndent + resolvedStyle.TextShadow.OffsetX
+				shadowX := contentLeft + resolvedStyle.TextShadow.OffsetX
 				shadowY := y + resolvedStyle.TextShadow.OffsetY
 				applyTextShadow(pdf, shadowX, shadowY, line, resolvedStyle.TextShadow)
 			}
@@ -108,23 +115,32 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 			if resolvedStyle.LetterSpacing != 0 {
 				textWidth += float64(len(line)) * resolvedStyle.LetterSpacing
 			}
+			if resolvedStyle.WordSpacing != 0 {
+				textWidth += float64(strings.Count(line, " ")) * resolvedStyle.WordSpacing
+			}
 
-			x := box.X + textIndent
+			x := contentLeft
 
 			// Apply alignment
 			align := resolvedStyle.TextAlign
 			if align == "" {
 				align = resolvedStyle.Align
 			}
+			if align == "start" {
+				align = "left"
+			}
+			if align == "end" {
+				align = "right"
+			}
 
 			switch align {
 			case "center":
-				x = box.X + (box.Width-textWidth)/2
+				x = contentLeft + (contentWidth-textWidth)/2
 			case "right":
-				x = box.X + box.Width - textWidth - resolvedStyle.Padding.Right
+				x = contentLeft + contentWidth - textWidth
 			case "justify":
 				if lineIdx < len(lines)-1 { // Don't justify last line
-					renderJustifiedLine(pdf, line, box.X+resolvedStyle.Padding.Left, box.X+box.Width-resolvedStyle.Padding.Right, y, resolvedStyle)
+					renderJustifiedLine(pdf, line, contentLeft, contentLeft+contentWidth, y, resolvedStyle)
 					y += lineHeight
 					continue
 				}
@@ -136,10 +152,11 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 			} else {
 				pdf.SetTextColor(0, 0, 0)
 			}
+			debug.Logf("render: text-line idx=%d x=%.2f y=%.2f align=%s color=%s text=%q", lineIdx, x, y, align, resolvedStyle.Color, line)
 
-			// Render text with or without letter spacing
-			if resolvedStyle.LetterSpacing != 0 {
-				renderTextWithSpacing(pdf, x, y, line, resolvedStyle.LetterSpacing)
+			// Render text with spacing when needed.
+			if resolvedStyle.LetterSpacing != 0 || resolvedStyle.WordSpacing != 0 {
+				renderTextWithSpacing(pdf, x, y, line, resolvedStyle.LetterSpacing, resolvedStyle.WordSpacing)
 			} else {
 				pdf.Text(x, y, line)
 			}
@@ -172,8 +189,8 @@ func renderBox(pdf *fpdf.Fpdf, box *layout.Box) {
 func renderJustifiedLine(pdf *fpdf.Fpdf, line string, leftX, rightX, y float64, resolvedStyle style.Style) {
 	words := strings.Fields(line)
 	if len(words) <= 1 {
-		if resolvedStyle.LetterSpacing != 0 {
-			renderTextWithSpacing(pdf, leftX, y, line, resolvedStyle.LetterSpacing)
+		if resolvedStyle.LetterSpacing != 0 || resolvedStyle.WordSpacing != 0 {
+			renderTextWithSpacing(pdf, leftX, y, line, resolvedStyle.LetterSpacing, resolvedStyle.WordSpacing)
 		} else {
 			pdf.Text(leftX, y, line)
 		}
@@ -196,14 +213,17 @@ func renderJustifiedLine(pdf *fpdf.Fpdf, line string, leftX, rightX, y float64, 
 	// Render each word with distributed spacing
 	x := leftX
 	for i, word := range words {
-		if resolvedStyle.LetterSpacing != 0 {
-			renderTextWithSpacing(pdf, x, y, word, resolvedStyle.LetterSpacing)
+		if resolvedStyle.LetterSpacing != 0 || resolvedStyle.WordSpacing != 0 {
+			renderTextWithSpacing(pdf, x, y, word, resolvedStyle.LetterSpacing, resolvedStyle.WordSpacing)
 		} else {
 			pdf.Text(x, y, word)
 		}
 		x += pdf.GetStringWidth(word) + extraSpace
 		if i < len(words)-1 {
 			x += pdf.GetStringWidth(" ")
+			if resolvedStyle.WordSpacing != 0 {
+				x += resolvedStyle.WordSpacing
+			}
 		}
 	}
 }
@@ -217,9 +237,26 @@ func transformText(content, transform string) string {
 		return strings.ToLower(content)
 	case "capitalize":
 		return strings.Title(content)
+	case "full-width":
+		return toFullWidth(content)
 	default:
 		return content
 	}
+}
+
+func toFullWidth(s string) string {
+	var out []rune
+	for _, r := range s {
+		switch {
+		case r == ' ':
+			out = append(out, '\u3000')
+		case r >= 33 && r <= 126:
+			out = append(out, r+0xFEE0)
+		default:
+			out = append(out, r)
+		}
+	}
+	return string(out)
 }
 
 // splitLines breaks text into lines that fit within maxWidth
@@ -285,6 +322,15 @@ func isZeroShadow(s style.Shadow) bool {
 // mapFontFamily maps generic or custom font names to FPDF-supported fonts
 // FPDF supports: Arial, Courier, Times, and custom embedded fonts
 func mapFontFamily(fontName string) string {
+	fontName = strings.TrimSpace(fontName)
+	if fontName == "" {
+		return "Arial"
+	}
+	if strings.Contains(fontName, ",") {
+		fontName = strings.Split(fontName, ",")[0]
+	}
+	fontName = strings.TrimSpace(strings.Trim(fontName, `"'`))
+
 	switch strings.ToLower(fontName) {
 	case "monospace", "courier", "courier new", "fixed":
 		return "Courier"
@@ -301,12 +347,16 @@ func mapFontFamily(fontName string) string {
 
 // renderTextWithSpacing renders text with custom letter-spacing
 // Renders character-by-character to apply spacing between characters
-func renderTextWithSpacing(pdf *fpdf.Fpdf, x, y float64, text string, letterSpacing float64) {
+func renderTextWithSpacing(pdf *fpdf.Fpdf, x, y float64, text string, letterSpacing, wordSpacing float64) {
 	currentX := x
-	for _, char := range text {
-		pdf.Text(currentX, y, string(char))
-		charWidth := pdf.GetStringWidth(string(char))
-		currentX += charWidth + letterSpacing
+	for idx, char := range text {
+		glyph := string(char)
+		pdf.Text(currentX, y, glyph)
+		glyphWidth := pdf.GetStringWidth(glyph)
+		currentX += glyphWidth + letterSpacing
+		if glyph == " " && wordSpacing != 0 && idx < len(text)-1 {
+			currentX += wordSpacing
+		}
 	}
 }
 
