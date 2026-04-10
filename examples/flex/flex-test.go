@@ -18,17 +18,17 @@ func main() {
 		{
 			name: "flexbox-row-basic",
 			html: `<div style="display: flex; gap: 10px;">
-				<div style="flex-grow: 1; background-color: lightblue;">Flex 1</div>
-				<div style="flex-grow: 2; background-color: lightgreen;">Flex 2</div>
-				<div style="flex-grow: 1; background-color: lightcoral;">Flex 3</div>
+				<div style="flex-grow: 1; background-color: #d0ebff;">Flex 1</div>
+				<div style="flex-grow: 2; background-color: #d3f9d8;">Flex 2</div>
+				<div style="flex-grow: 1; background-color: #ffe3e3;">Flex 3</div>
 			</div>`,
 		},
 		{
 			name: "flexbox-column",
-			html: `<div style="display: flex; flex-direction: column;">
-				<h2>Header</h2>
-				<p>Main content area with flex column layout</p>
-				<p>Footer area</p>
+			html: `<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; background-color: #efefef; padding: 16px;">
+				<h2 style="background-color: #d0ebff; padding: 8px;">Header</h2>
+				<p style="background-color: #d3f9d8; padding: 8px;">Main content area with flex column layout</p>
+				<p style="background-color: #ffe3e3; padding: 8px;">Footer area</p>
 			</div>`,
 		},
 		{

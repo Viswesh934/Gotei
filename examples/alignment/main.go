@@ -176,28 +176,29 @@ func generateTestsFromJSON() []struct {
 		{
 			name: "15-text-transform-all",
 			html: `<div><h2>Text Transform</h2>
-				<p style="text-transform: none">none: Hello World Mixed Case</p>
-				<p style="text-transform: capitalize">capitalize: hello world mixed case</p>
-				<p style="text-transform: uppercase">uppercase: hello world mixed case</p>
-				<p style="text-transform: lowercase">lowercase: HELLO WORLD MIXED CASE</p>
-				<p style="text-transform: full-width">full-width: hello world</p>
+				<p style="background-color: #eef2ff; padding: 6px;">Reference (unchanged): hello WORLD mixed Case 123</p>
+				<p style="text-transform: none; background-color: #f5f5f5; padding: 6px;">hello WORLD mixed Case 123</p>
+				<p style="text-transform: capitalize; background-color: #f5f5f5; padding: 6px;">hello world mixed case 123</p>
+				<p style="text-transform: uppercase; background-color: #f5f5f5; padding: 6px;">hello world mixed case 123</p>
+				<p style="text-transform: lowercase; background-color: #f5f5f5; padding: 6px;">HELLO WORLD MIXED CASE 123</p>
+				<p style="text-transform: full-width; background-color: #f5f5f5; padding: 6px;">hello world 123</p>
 			</div>`,
 		},
 		// COLORS - NAMED BASIC
 		{
 			name: "16-colors-basic-named",
 			html: `<div><h2>Colors - Basic Named</h2>
-				<p style="color: black">Color: black</p>
-				<p style="color: white; background-color: black">Color: white (on black)</p>
-				<p style="color: red">Color: red</p>
-				<p style="color: green">Color: green</p>
-				<p style="color: blue">Color: blue</p>
-				<p style="color: yellow">Color: yellow</p>
-				<p style="color: cyan">Color: cyan</p>
-				<p style="color: magenta">Color: magenta</p>
-				<p style="color: gray">Color: gray</p>
-				<p style="color: orange">Color: orange</p>
-				<p style="color: purple">Color: purple</p>
+				<p style="color: black; background-color: #f3f4f6; padding: 6px;">Color: black</p>
+				<p style="color: white; background-color: #4a5568; padding: 6px;">Color: white (on slate)</p>
+				<p style="color: red; background-color: #fff1f2; padding: 6px; font-weight: 900; font-size: 20px;">RED RED RED</p>
+				<p style="color: green; background-color: #ecfdf5; padding: 6px; font-weight: 700;">Color: green</p>
+				<p style="color: blue; background-color: #eff6ff; padding: 6px; font-weight: 700;">Color: blue</p>
+				<p style="color: yellow; background-color: #111827; padding: 6px;">Color: yellow</p>
+				<p style="color: cyan; background-color: #111827; padding: 6px;">Color: cyan</p>
+				<p style="color: magenta; background-color: #fdf2f8; padding: 6px; font-weight: 700;">Color: magenta</p>
+				<p style="color: gray; background-color: #f3f4f6; padding: 6px;">Color: gray</p>
+				<p style="color: orange; background-color: #fff7ed; padding: 6px; font-weight: 700;">Color: orange</p>
+				<p style="color: purple; background-color: #f5f3ff; padding: 6px; font-weight: 700;">Color: purple</p>
 			</div>`,
 		},
 		// COLORS - HEX 6-digit
@@ -208,7 +209,7 @@ func generateTestsFromJSON() []struct {
 				<p style="color: #FF0000">Hex #FF0000 (red)</p>
 				<p style="color: #00FF00">Hex #00FF00 (green)</p>
 				<p style="color: #0000FF">Hex #0000FF (blue)</p>
-				<p style="color: #FFFFFF; background-color: #333333">Hex #FFFFFF (white)</p>
+				<p style="color: #FFFFFF; background-color: #6b7280; padding: 6px;">Hex #FFFFFF (white)</p>
 				<p style="color: #FFFF00">Hex #FFFF00 (yellow)</p>
 				<p style="color: #FF00FF">Hex #FF00FF (magenta)</p>
 				<p style="color: #00FFFF">Hex #00FFFF (cyan)</p>
@@ -222,7 +223,7 @@ func generateTestsFromJSON() []struct {
 				<p style="color: #F00">Hex #F00 (red)</p>
 				<p style="color: #0F0">Hex #0F0 (green)</p>
 				<p style="color: #00F">Hex #00F (blue)</p>
-				<p style="color: #FFF; background-color: #333">Hex #FFF (white)</p>
+				<p style="color: #FFF; background-color: #64748b; padding: 6px;">Hex #FFF (white)</p>
 				<p style="color: #FF0">Hex #FF0 (yellow)</p>
 			</div>`,
 		},
@@ -234,7 +235,7 @@ func generateTestsFromJSON() []struct {
 				<p style="color: rgb(255,0,0)">RGB (255,0,0) red</p>
 				<p style="color: rgb(0,255,0)">RGB (0,255,0) green</p>
 				<p style="color: rgb(0,0,255)">RGB (0,0,255) blue</p>
-				<p style="color: rgb(255,255,255); background-color: #333">RGB (255,255,255) white</p>
+				<p style="color: rgb(255,255,255); background-color: #6b7280; padding: 6px;">RGB (255,255,255) white</p>
 				<p style="color: rgb(255,165,0)">RGB (255,165,0) orange</p>
 				<p style="color: rgb(128,0,128)">RGB (128,0,128) purple</p>
 			</div>`,
@@ -247,7 +248,7 @@ func generateTestsFromJSON() []struct {
 				<p style="color: hsl(0,100%,50%)">HSL (0,100%,50%) red</p>
 				<p style="color: hsl(120,100%,50%)">HSL (120,100%,50%) green</p>
 				<p style="color: hsl(240,100%,50%)">HSL (240,100%,50%) blue</p>
-				<p style="color: hsl(0,0%,100%); background-color: #333">HSL (0,0%,100%) white</p>
+				<p style="color: hsl(0,0%,100%); background-color: #6b7280; padding: 6px;">HSL (0,0%,100%) white</p>
 				<p style="color: hsl(39,100%,50%)">HSL (39,100%,50%) orange</p>
 				<p style="color: hsl(300,100%,50%)">HSL (300,100%,50%) magenta</p>
 			</div>`,
@@ -256,16 +257,16 @@ func generateTestsFromJSON() []struct {
 		{
 			name: "21-colors-named-extended",
 			html: `<div><h2>Colors - Extended Named (140+)</h2>
-				<p style="color: aliceblue">aliceblue</p>
-				<p style="color: antiquewhite">antiquewhite</p>
-				<p style="color: aquamarine">aquamarine</p>
-				<p style="color: coral">coral</p>
-				<p style="color: cornflowerblue">cornflowerblue</p>
-				<p style="color: darkseagreen">darkseagreen</p>
-				<p style="color: rebeccapurple">rebeccapurple</p>
-				<p style="color: mediumvioletred">mediumvioletred</p>
-				<p style="color: steelblue">steelblue</p>
-				<p style="color: tomato">tomato</p>
+				<p style="color: aliceblue; background-color: #111827; padding: 6px;">aliceblue</p>
+				<p style="color: antiquewhite; background-color: #111827; padding: 6px;">antiquewhite</p>
+				<p style="color: aquamarine; background-color: #111827; padding: 6px;">aquamarine</p>
+				<p style="color: coral; background-color: #111827; padding: 6px;">coral</p>
+				<p style="color: cornflowerblue; background-color: #111827; padding: 6px;">cornflowerblue</p>
+				<p style="color: darkseagreen; background-color: #111827; padding: 6px;">darkseagreen</p>
+				<p style="color: rebeccapurple; background-color: #f3f4f6; padding: 6px;">rebeccapurple</p>
+				<p style="color: mediumvioletred; background-color: #111827; padding: 6px;">mediumvioletred</p>
+				<p style="color: steelblue; background-color: #111827; padding: 6px;">steelblue</p>
+				<p style="color: tomato; background-color: #111827; padding: 6px;">tomato</p>
 			</div>`,
 		},
 		// BACKGROUND COLORS
@@ -304,10 +305,10 @@ func generateTestsFromJSON() []struct {
 		{
 			name: "25-borders-styles",
 			html: `<div><h2>Border Styles</h2>
-				<p style="border: 2px solid red; padding: 10px">Solid red border</p>
-				<p style="border: 2px dashed blue; padding: 10px">Dashed blue border</p>
-				<p style="border: 2px dotted green; padding: 10px">Dotted green border</p>
-				<p style="border: 3px double black; padding: 10px">Double black border</p>
+				<p style="border: 2px solid #ef4444; background-color: #fef2f2; padding: 10px">Solid red border</p>
+				<p style="border: 2px dashed #3b82f6; background-color: #eff6ff; padding: 10px">Dashed blue border</p>
+				<p style="border: 2px dotted #10b981; background-color: #ecfdf5; padding: 10px">Dotted green border</p>
+				<p style="border: 3px double #6b7280; background-color: #f9fafb; padding: 10px">Double gray border</p>
 			</div>`,
 		},
 		// BORDER RADIUS
@@ -316,7 +317,7 @@ func generateTestsFromJSON() []struct {
 			html: `<div><h2>Border Radius</h2>
 				<p style="border: 1px solid black; padding: 10px; border-radius: 5px">Rounded 5px</p>
 				<p style="border: 1px solid black; padding: 10px; border-radius: 10px">Rounded 10px</p>
-				<p style="background-color: lightblue; padding: 10px; border-radius: 15px">Rounded 15px with bg</p>
+				<p style="background-color: #f0f0f0; padding: 10px; border-radius: 15px">Rounded 15px with bg</p>
 			</div>`,
 		},
 		// PADDING - shorthand and sides
@@ -375,9 +376,18 @@ func generateTestsFromJSON() []struct {
 func main() {
 	testCases := generateTestsFromJSON()
 
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to read working directory: %v", err)
+	}
+	repoRoot, err := findRepoRoot(wd)
+	if err != nil {
+		log.Fatalf("Failed to locate repository root: %v", err)
+	}
+
 	// Create output directory
-	outputDir := "examples/output"
-	err := os.MkdirAll(outputDir, 0755)
+	outputDir := filepath.Join(repoRoot,"alignment","examples", "output")
+	err = os.MkdirAll(outputDir, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create output directory: %v", err)
 	}
@@ -424,4 +434,18 @@ func main() {
 
 	fmt.Println()
 	fmt.Printf("All %d style tests completed! Check examples/output/ for PDFs.\n", len(testCases))
+}
+
+func findRepoRoot(start string) (string, error) {
+	dir := start
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("go.mod not found from %s", start)
+		}
+		dir = parent
+	}
 }
