@@ -72,16 +72,18 @@ type Style struct {
 	BgColor    string // shorthand/legacy
 
 	// BOX MODEL
-	Margin    BoxDimensions
-	Padding   BoxDimensions
-	Border    Border
-	Width     float64
-	Height    float64
-	MaxWidth  float64
-	MinWidth  float64
-	MaxHeight float64
-	MinHeight float64
-	BoxSizing string // "content-box", "border-box"
+	Margin        BoxDimensions
+	Padding       BoxDimensions
+	Border        Border
+	Width         float64
+	WidthPercent  float64
+	Height        float64
+	HeightPercent float64
+	MaxWidth      float64
+	MinWidth      float64
+	MaxHeight     float64
+	MinHeight     float64
+	BoxSizing     string // "content-box", "border-box"
 
 	// DISPLAY & LAYOUT
 	Display    string // "block", "inline", "inline-block", "flex", "grid", "none"
@@ -130,14 +132,14 @@ type Style struct {
 	Align  string // legacy, use TextAlign instead
 }
 
-// Default style for all elements (W3C compliant)
+// Default style optimized for standard PDF documents
 var DefaultStyle = Style{
-	// Text & Font
-	FontSize:       12,
+	// Text & Font - standard readable size
+	FontSize:       11,
 	FontFamily:     "Arial",
 	FontWeight:     "normal",
 	FontStyle:      "normal",
-	LineHeight:     1.5,
+	LineHeight:     1.4,  // Standard comfortable reading
 	LetterSpacing:  0,
 	WordSpacing:    0,
 	TextTransform:  "none",
@@ -152,39 +154,41 @@ var DefaultStyle = Style{
 	WordWrap:      "normal",
 
 	// Color & Background
-	Color:   "black",
+	Color:   "#000000",
 	Opacity: 1.0,
-	BgColor: "white",
+	BgColor: "#ffffff",
 	Background: Background{
-		Color: "white",
+		Color: "#ffffff",
 		Size:  "auto",
 	},
 
-	// Box Model
+	// Box Model - balanced margins
 	Margin: BoxDimensions{
-		Top:    4,
-		Right:  4,
-		Bottom: 4,
-		Left:   4,
+		Top:    0,
+		Right:  0,
+		Bottom: 0,
+		Left:   0,
 	},
 	Padding: BoxDimensions{
-		Top:    2,
-		Right:  2,
-		Bottom: 2,
-		Left:   2,
+		Top:    0,
+		Right:  0,
+		Bottom: 0,
+		Left:   0,
 	},
 	Border: Border{
 		Width: 0,
 		Style: "solid",
-		Color: "black",
+		Color: "#000000",
 	},
-	Width:     0,
-	Height:    0,
-	MaxWidth:  0,
-	MinWidth:  0,
-	MaxHeight: 0,
-	MinHeight: 0,
-	BoxSizing: "content-box",
+	Width:         0,
+	WidthPercent:  0,
+	Height:        0,
+	HeightPercent: 0,
+	MaxWidth:      0,
+	MinWidth:      0,
+	MaxHeight:     0,
+	MinHeight:     0,
+	BoxSizing:     "border-box",
 
 	// Display & Layout
 	Display:    "block",
@@ -216,227 +220,189 @@ var DefaultStyle = Style{
 	Align:  "left",
 }
 
-// InheritableFields defines which CSS properties cascade from parent to child
-// per W3C spec (most text properties inherit, box model generally doesn't)
-var InheritableFields = map[string]bool{
-	// Inherited by default
-	"FontSize":       true,
-	"FontFamily":     true,
-	"FontWeight":     true,
-	"FontStyle":      true,
-	"LineHeight":     true,
-	"LetterSpacing":  true,
-	"WordSpacing":    true,
-	"TextTransform":  true,
-	"TextDecoration": true,
-	"TextAlign":      true,
-	"VerticalAlign":  true,
-	"Direction":      true,
-	"WhiteSpace":     true,
-	"WordBreak":      true,
-	"WordWrap":       true,
-	"Color":          true,
-	"Opacity":        true,
-
-	// Not inherited
-	"Margin":   false,
-	"Padding":  false,
-	"Border":   false,
-	"Width":    false,
-	"Height":   false,
-	"Display":  false,
-	"Position": false,
-	"Float":    false,
-
-	// Legacy
-	"Bold":   true,
-	"Italic": true,
-	"Align":  true,
-}
-
-// TagDefaults maps HTML tags to their default styles (W3C compliant)
+// TagDefaults for standard PDF documents
 var TagDefaults = map[string]Style{
+	// Headings - comfortable spacing
 	"h1": {
-		FontSize:   28,
-		FontWeight: "bold",
-		Bold:       true,
-		Margin: BoxDimensions{
-			Top:    16,
-			Bottom: 16,
-			Left:   0,
-			Right:  0,
-		},
-		Padding: BoxDimensions{
-			Top:    8,
-			Bottom: 8,
-			Left:   8,
-			Right:  8,
-		},
-	},
-	"h2": {
 		FontSize:   24,
 		FontWeight: "bold",
 		Bold:       true,
 		Margin: BoxDimensions{
-			Top:    14,
-			Bottom: 14,
+			Top:    12,
+			Bottom: 8,
 			Left:   0,
 			Right:  0,
 		},
-		Padding: BoxDimensions{
-			Top:    6,
-			Bottom: 6,
-			Left:   6,
-			Right:  6,
-		},
+		Padding: BoxDimensions{},
 	},
-	"h3": {
+	"h2": {
 		FontSize:   20,
 		FontWeight: "bold",
 		Bold:       true,
 		Margin: BoxDimensions{
-			Top:    12,
-			Bottom: 12,
+			Top:    10,
+			Bottom: 6,
 			Left:   0,
 			Right:  0,
 		},
-		Padding: BoxDimensions{
-			Top:    4,
-			Bottom: 4,
-			Left:   4,
-			Right:  4,
-		},
+		Padding: BoxDimensions{},
 	},
-	"h4": {
+	"h3": {
 		FontSize:   18,
 		FontWeight: "bold",
 		Bold:       true,
 		Margin: BoxDimensions{
-			Top:    10,
-			Bottom: 10,
+			Top:    8,
+			Bottom: 5,
 			Left:   0,
 			Right:  0,
 		},
-		Padding: BoxDimensions{
-			Top:    4,
-			Bottom: 4,
-			Left:   4,
-			Right:  4,
-		},
+		Padding: BoxDimensions{},
 	},
-	"h5": {
+	"h4": {
 		FontSize:   16,
 		FontWeight: "bold",
 		Bold:       true,
 		Margin: BoxDimensions{
-			Top:    8,
-			Bottom: 8,
+			Top:    6,
+			Bottom: 4,
 			Left:   0,
 			Right:  0,
 		},
-		Padding: BoxDimensions{
-			Top:    3,
-			Bottom: 3,
-			Left:   3,
-			Right:  3,
-		},
+		Padding: BoxDimensions{},
 	},
-	"h6": {
+	"h5": {
 		FontSize:   14,
 		FontWeight: "bold",
 		Bold:       true,
 		Margin: BoxDimensions{
-			Top:    6,
-			Bottom: 6,
+			Top:    5,
+			Bottom: 3,
 			Left:   0,
 			Right:  0,
 		},
-		Padding: BoxDimensions{
-			Top:    2,
-			Bottom: 2,
-			Left:   2,
-			Right:  2,
-		},
+		Padding: BoxDimensions{},
 	},
-	"p": {
-		FontSize: 12,
-		Margin: BoxDimensions{
-			Top:    8,
-			Bottom: 8,
-			Left:   0,
-			Right:  0,
-		},
-		Padding: BoxDimensions{
-			Top:    2,
-			Bottom: 2,
-			Left:   2,
-			Right:  2,
-		},
-	},
-	"div": {
-		FontSize: 12,
-		Display:  "block",
-		Margin: BoxDimensions{
-			Top:    6,
-			Bottom: 6,
-			Left:   0,
-			Right:  0,
-		},
-		Padding: BoxDimensions{
-			Top:    2,
-			Bottom: 2,
-			Left:   2,
-			Right:  2,
-		},
-	},
-	"span": {
-		FontSize: 12,
-		Display:  "inline",
-		Margin:   BoxDimensions{},
-		Padding:  BoxDimensions{},
-	},
-	"strong": {
+	"h6": {
 		FontSize:   12,
+		FontWeight: "bold",
+		Bold:       true,
+		Margin: BoxDimensions{
+			Top:    4,
+			Bottom: 2,
+			Left:   0,
+			Right:  0,
+		},
+		Padding: BoxDimensions{},
+	},
+	
+	// Paragraph - standard spacing with justified alignment for full width
+	"p": {
+		FontSize:   11,
+		LineHeight: 1.4,
+		TextAlign:  "justify",
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 8,  // Standard paragraph spacing
+			Left:   0,
+			Right:  0,
+		},
+		WidthPercent: 100,
+		Padding: BoxDimensions{},
+	},
+	
+	// Div - minimal margins
+	"div": {
+		FontSize:   11,
+		Display:    "block",
+		LineHeight: 1.4,
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 4,
+			Left:   0,
+			Right:  0,
+		},
+		Padding: BoxDimensions{},
+	},
+	
+	// Span - inline
+	"span": {
+		FontSize:   11,
+		Display:    "inline",
+		LineHeight: 1.4,
+		Margin:     BoxDimensions{},
+		Padding:    BoxDimensions{},
+	},
+	
+	// Links
+	"a": {
+		FontSize:       11,
+		Display:        "inline",
+		Color:          "#0066cc",
+		TextDecoration: "underline",
+		Margin:         BoxDimensions{},
+		Padding:        BoxDimensions{},
+	},
+	
+	// Images
+	"img": {
+		Display: "inline-block",
+		Margin: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   0,
+			Right:  0,
+		},
+		Padding: BoxDimensions{},
+	},
+	
+	// Bold/strong
+	"strong": {
+		FontSize:   11,
 		FontWeight: "bold",
 		Bold:       true,
 		Display:    "inline",
 		Margin:     BoxDimensions{},
 		Padding:    BoxDimensions{},
-	},
-	"em": {
-		FontSize:  12,
-		FontStyle: "italic",
-		Italic:    true,
-		Display:   "inline",
-		Margin:    BoxDimensions{},
-		Padding:   BoxDimensions{},
 	},
 	"b": {
-		FontSize:   12,
+		FontSize:   11,
 		FontWeight: "bold",
 		Bold:       true,
 		Display:    "inline",
 		Margin:     BoxDimensions{},
 		Padding:    BoxDimensions{},
 	},
-	"i": {
-		FontSize:  12,
+	
+	// Italic/em
+	"em": {
+		FontSize:  11,
 		FontStyle: "italic",
 		Italic:    true,
 		Display:   "inline",
 		Margin:    BoxDimensions{},
 		Padding:   BoxDimensions{},
 	},
+	"i": {
+		FontSize:  11,
+		FontStyle: "italic",
+		Italic:    true,
+		Display:   "inline",
+		Margin:    BoxDimensions{},
+		Padding:   BoxDimensions{},
+	},
+	
+	// Code/pre
 	"code": {
 		FontSize:   10,
 		FontFamily: "Courier",
 		Display:    "inline",
-		BgColor:    "lightgray",
+		BgColor:    "#f4f4f4",
 		Padding: BoxDimensions{
-			Top:    2,
-			Bottom: 2,
-			Left:   2,
-			Right:  2,
+			Top:    1,
+			Bottom: 1,
+			Left:   3,
+			Right:  3,
 		},
 	},
 	"pre": {
@@ -456,41 +422,182 @@ var TagDefaults = map[string]Style{
 			Left:   8,
 			Right:  8,
 		},
-		BgColor: "lightgray",
+		BgColor: "#f4f4f4",
 	},
-}
-
-// ClassStyles maps CSS class names to their styles
-var ClassStyles = map[string]Style{
-	"title": {
-		FontSize:   24,
-		FontWeight: "bold",
-		Bold:       true,
-		Margin: BoxDimensions{
-			Top:    12,
-			Bottom: 12,
-			Left:   0,
-			Right:  0,
-		},
-	},
-	"subtitle": {
-		FontSize:   18,
-		FontWeight: "bold",
-		Bold:       true,
+	
+	// Tables - standard spacing
+	"table": {
+		Display: "table",
 		Margin: BoxDimensions{
 			Top:    8,
 			Bottom: 8,
 			Left:   0,
 			Right:  0,
 		},
+		Border: Border{
+			Width: 0,
+		},
+	},
+	"thead": {
+		Display: "table-header-group",
+	},
+	"tbody": {
+		Display: "table-row-group",
+	},
+	"tfoot": {
+		Display: "table-footer-group",
+	},
+	"tr": {
+		Display: "table-row",
+	},
+	
+	// Table cells
+	"td": {
+		Display: "table-cell",
+		FontSize: 10,
+		Padding: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   6,
+			Right:  6,
+		},
+		Border: Border{
+			Width: 0,
+		},
+	},
+	"th": {
+		Display:    "table-cell",
+		FontSize:   10,
+		FontWeight: "bold",
+		Bold:       true,
+		Padding: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   6,
+			Right:  6,
+		},
+		Border: Border{
+			Width: 0,
+		},
+	},
+	
+	// Lists
+	"ul": {
+		Display: "block",
+		Margin: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   24,
+			Right:  0,
+		},
+		Padding: BoxDimensions{},
+	},
+	"ol": {
+		Display: "block",
+		Margin: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   24,
+			Right:  0,
+		},
+		Padding: BoxDimensions{},
+	},
+	"li": {
+		Display: "list-item",
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 2,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	
+	// Form elements
+	"input": {
+		Display: "inline-block",
+		Margin:  BoxDimensions{},
+		Padding: BoxDimensions{
+			Top:    2,
+			Bottom: 2,
+			Left:   4,
+			Right:  4,
+		},
+	},
+	"button": {
+		Display: "inline-block",
+		Margin:  BoxDimensions{},
+		Padding: BoxDimensions{
+			Top:    4,
+			Bottom: 4,
+			Left:   8,
+			Right:  8,
+		},
+	},
+}
+
+// ClassStyles for standard documents
+var ClassStyles = map[string]Style{
+	"title": {
+		FontSize:   24,
+		FontWeight: "bold",
+		Bold:       true,
+		Margin: BoxDimensions{
+			Top:    8,
+			Bottom: 12,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	"subtitle": {
+		FontSize:   16,
+		FontWeight: "bold",
+		Bold:       true,
+		Margin: BoxDimensions{
+			Top:    4,
+			Bottom: 8,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	"body-text": {
+		FontSize:   11,
+		LineHeight: 1.4,
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 8,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	"compact": {
+		LineHeight: 1.2,
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 4,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	"tight": {
+		Margin: BoxDimensions{
+			Top:    0,
+			Bottom: 2,
+			Left:   0,
+			Right:  0,
+		},
+	},
+	"no-margin": {
+		Margin: BoxDimensions{},
+	},
+	"no-padding": {
+		Padding: BoxDimensions{},
 	},
 	"highlight": {
-		BgColor: "yellow",
-		Bold:    true,
+		BgColor: "#ffffcc",
 	},
 	"muted": {
-		Color:   "gray",
-		Opacity: 0.7,
+		Color:   "#666666",
+		Opacity: 0.8,
 	},
 	"center": {
 		TextAlign: "center",
@@ -498,27 +605,57 @@ var ClassStyles = map[string]Style{
 	"right": {
 		TextAlign: "right",
 	},
+	"justify": {
+		TextAlign: "justify",
+	},
 	"code": {
 		FontSize:   10,
 		FontFamily: "Courier",
-		BgColor:    "lightgray",
+		BgColor:    "#f4f4f4",
 		Padding: BoxDimensions{
 			Top:    2,
 			Bottom: 2,
-			Left:   2,
-			Right:  2,
+			Left:   4,
+			Right:  4,
 		},
 	},
 	"text-success": {
-		Color: "green",
+		Color: "#28a745",
 	},
 	"text-danger": {
-		Color: "red",
+		Color: "#dc3545",
 	},
 	"text-warning": {
-		Color: "orange",
+		Color: "#ffc107",
 	},
 	"text-info": {
-		Color: "blue",
+		Color: "#17a2b8",
+	},
+	"border": {
+		Border: Border{
+			Width: 1,
+			Style: "solid",
+			Color: "#cccccc",
+		},
+		Padding: BoxDimensions{
+			Top:    8,
+			Bottom: 8,
+			Left:   8,
+			Right:  8,
+		},
+	},
+	"border-bottom": {
+		Border: Border{
+			Width: 1,
+			Style: "solid",
+			Color: "#cccccc",
+		},
+	},
+	"border-top": {
+		Border: Border{
+			Width: 1,
+			Style: "solid",
+			Color: "#cccccc",
+		},
 	},
 }

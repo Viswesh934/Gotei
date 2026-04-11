@@ -9,7 +9,7 @@ import (
 )
 
 func generatePhase4Examples() error {
-	outputDir := "phase4-output"
+	outputDir := "bor-bg-shad-output"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}

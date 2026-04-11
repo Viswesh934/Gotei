@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// Create output directory
-	outputDir := "examples/flex-output"
+	outputDir := "flex-output"
 	err := os.MkdirAll(outputDir, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create output directory: %v", err)

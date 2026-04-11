@@ -5,8 +5,14 @@ This folder contains test programs demonstrating Gotei's style rendering capabil
 ## Running the Examples
 
 ```bash
-cd examples
-go run main.go
+go run ./cmd/examples-runner
+
+# Or run individual suites:
+go run ./examples/alignment/main.go
+go run ./examples/flex/flex-test.go
+go run ./examples/tables/table-test.go
+go run ./examples/phase2/phase2-test.go
+go run ./examples/fullscale/form2-test.go
 ```
 
 This generates PDFs in the `output/` folder testing:
@@ -21,6 +27,25 @@ This generates PDFs in the `output/` folder testing:
 - **bold-italic-colors** - typography and color combinations
 - **headings-with-styles** - all heading levels with various styles
 - **comprehensive-styles** - comprehensive test combining all features
+
+Table-specific runs generate PDFs in `examples/tables/output/` including:
+
+- basic bordered table
+- colspan table layout
+- mixed table styling with heading/body cell variations
+
+Phase 2 runs generate PDFs in `examples/phase2/output/` including:
+
+- hyperlink click target verification
+- local image rendering verification
+- pagination stress verification (multi-page flow)
+
+Full-scale runs generate production-style form outputs in `examples/fullscale/output/` including:
+
+- multi-section Form 2 style document
+- dynamic nominee/family table row generation
+- embedded logo/signature/seal images
+- long-form layout that exercises page flow and table rendering
 
 ## Generated PDFs
 
