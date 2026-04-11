@@ -20,11 +20,26 @@ func Layout(box *Box, x, y, maxWidth float64) float64 {
 	box.Y = y
 	box.Width = maxWidth - (box.Style.Margin.Left + box.Style.Margin.Right)
 
+	// Table algorithm computes concrete column widths for cells; do not shrink/expand
+	// them again via generic width rules or gaps appear between columns.
+	isTableCell := box.Style.Display == "table-cell"
+	if !isTableCell {
+		if box.Style.WidthPercent > 0 {
+			box.Width = maxWidth * box.Style.WidthPercent / 100.0
+		}
+		if box.Style.Width > 0 {
+			box.Width = box.Style.Width
+		}
+	}
+	if box.Width < 0 {
+		box.Width = 0
+	}
+
 	// TEXT NODE
 	if box.Node.Type == dom.TextNode {
 		paddingHorizontal := box.Style.Padding.Left + box.Style.Padding.Right
 		paddingVertical := box.Style.Padding.Top + box.Style.Padding.Bottom
-		lines := wrapText(box.Node.Content, box.Width-paddingHorizontal)
+		lines := WrapText(box.Node.Content, box.Width-paddingHorizontal, box.Style.FontSize)
 
 		lineHeight := CalculateLineHeight(box.Style)
 		box.Height = float64(len(lines))*lineHeight + paddingVertical
@@ -33,11 +48,21 @@ func Layout(box *Box, x, y, maxWidth float64) float64 {
 		return box.Height + box.Style.Margin.Top + box.Style.Margin.Bottom
 	}
 
+	if box.Node.Type == dom.ElementNode && box.Node.Tag == "img" {
+		h := layoutImage(box, x, y, box.Width)
+		debug.Logf("layout: image-box x=%.2f y=%.2f w=%.2f h=%.2f", box.X, box.Y, box.Width, box.Height)
+		return h
+	}
+
 	// Route to appropriate layout algorithm based on display property
 	switch box.Style.Display {
 	case "flex":
 		h := LayoutFlexbox(box, x, y, box.Width)
 		debug.Logf("layout: flex-box display=%s x=%.2f y=%.2f w=%.2f h=%.2f", box.Style.Display, box.X, box.Y, box.Width, box.Height)
+		return h
+	case "table", "table-row-group", "table-row", "table-cell":
+		h := LayoutTable(box, x, y, box.Width)
+		debug.Logf("layout: table-box display=%s x=%.2f y=%.2f w=%.2f h=%.2f", box.Style.Display, box.X, box.Y, box.Width, box.Height)
 		return h
 	case "inline", "inline-block":
 		// For now, treat inline-block similar to block

@@ -1,6 +1,8 @@
 package layout
 
 import (
+	"strings"
+
 	"github.com/Viswesh934/gotei/internal/dom"
 	"github.com/Viswesh934/gotei/internal/style"
 )
@@ -10,6 +12,14 @@ import (
 func BuildLayoutTreeWithCascade(n *dom.Node, styleMap map[*dom.Node]style.Style) *Box {
 	if n == nil {
 		return nil
+	}
+
+	if n.Type == dom.ElementNode {
+		tag := strings.ToLower(strings.TrimSpace(n.Tag))
+		switch tag {
+		case "head", "style", "script", "meta", "title", "link", "noscript":
+			return nil
+		}
 	}
 
 	// The cascade step already resolved inheritance and defaults.
